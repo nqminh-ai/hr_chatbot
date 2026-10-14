@@ -1,40 +1,66 @@
 @echo off
 setlocal
+title Appota Knowledge System Launcher
 cd /d "%~dp0"
 
+echo =====================================================================
+echo                TRINH KHOI DONG HE THONG APPOTA
+echo =====================================================================
+echo.
+echo  [1] Giao dien Chatbot Next.js moi (Next.js - Port 3000) [Mac dinh]
+echo  [2] Giao dien Streamlit goc (Streamlit - Port 8501)
+echo  [3] Chay ca 2 giao dien cung luc
+echo.
+echo =====================================================================
+set "CHOICE=1"
+set /p "CHOICE=Nhap lua chon cua ban [1/2/3] (Bam Enter de chon 1): "
+
+if "%CHOICE%"=="2" goto :run_streamlit
+if "%CHOICE%"=="3" goto :run_both
+goto :run_nextjs
+
+:run_nextjs
+echo.
+echo [1/1] Dang khoi dong Giao dien Chatbot Next.js...
+cd /d "%~dp0frontend"
+if not exist "node_modules" (
+    echo Dang cai dat dependencies npm...
+    call npm install
+)
+echo Truy cap tai: http://localhost:3000
+echo Nhan Ctrl+C de dung.
+echo.
+call npm run dev
+goto :end
+
+:run_streamlit
+echo.
+echo [1/1] Dang khoi dong Giao dien Streamlit goc...
 set "APPOTA_PYTHON=%~dp0.venv\Scripts\python.exe"
-
-if not exist "%~dp0app.py" (
-    echo ERROR: app.py was not found. Keep this launcher in the project folder.
-    goto :failed
-)
-
 if not exist "%APPOTA_PYTHON%" (
-    echo ERROR: The project's .venv environment was not found.
-    echo Follow the Windows setup instructions in README.md first.
-    goto :failed
+    echo [LOI] Khong tim thay Python venv tai .venv\Scripts\python.exe.
+    pause
+    exit /b 1
 )
-
-"%APPOTA_PYTHON%" -B -c "import streamlit" >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: Streamlit is missing or the Python environment is damaged.
-    echo Follow the Windows setup instructions in README.md first.
-    goto :failed
-)
-
-echo Starting Appota at http://127.0.0.1:8501
 if not exist "%~dp0data\appota.db" (
     "%APPOTA_PYTHON%" -B "%~dp0manage_database.py" init
-    if errorlevel 1 goto :failed
 )
-echo Keep this window open. Press Ctrl+C to stop the app.
-echo.
+echo Truy cap tai: http://localhost:8501
 "%APPOTA_PYTHON%" -B -m streamlit run "%~dp0app.py" --server.address 127.0.0.1 --server.port 8501 --server.headless false --browser.gatherUsageStats false
-if errorlevel 1 goto :failed
-exit /b 0
+goto :end
 
-:failed
+:run_both
 echo.
-echo Appota could not start. Check the error above.
+echo Dang khoi dong ca 2 giao dien trong 2 cua so rieng biet...
+start "Appota - Next.js Chatbot (Port 3000)" cmd /k "%~dp0run_frontend.bat"
+start "Appota - Streamlit (Port 8501)" cmd /k "%APPOTA_PYTHON%" -B -m streamlit run "%~dp0app.py" --server.address 127.0.0.1 --server.port 8501 --server.headless false --browser.gatherUsageStats false
+echo.
+echo Da khoi dong ca hai giao dien!
+echo   - Next.js Chatbot: http://localhost:3000
+echo   - Streamlit:       http://localhost:8501
+echo.
 pause
-exit /b 1
+goto :end
+
+:end
+exit /b 0

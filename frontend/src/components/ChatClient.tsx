@@ -17,27 +17,36 @@ export function ChatClient() {
   const [inspection, setInspection] = useState<ChatMessage | null>(null);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   const [provider, setProvider] = useState<'rules' | 'gemini'>('rules');
+  const [supabaseStatus, setSupabaseStatus] = useState<{ connected: boolean; tableCount?: number; error?: string } | null>(null);
   const [notice, setNotice] = useState('');
   const request = useRef<{ id: number; controller?: AbortController; busy: boolean }>({ id: 0, busy: false });
   const active = conversations.find(chat => chat.id === activeId);
   const latest = inspection || active?.messages.filter(message => message.sender === 'assistant').at(-1);
 
   useEffect(() => {
+    const pendingRequest = request.current;
     let restored: Conversation[] = [];
     try { restored = restoreConversations(localStorage.getItem(STORAGE_KEY)); }
+    // Hydrate browser storage after mount so server and initial client renders match.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     catch { setNotice('Không đọc được lịch sử cũ. Cuộc trò chuyện hiện tại vẫn sử dụng được.'); }
     const chats = restored.length ? restored : [newConversation()];
     setConversations(chats); setActiveId(chats[0].id); setReady(true);
     const controller = new AbortController();
     fetch('/api/chat', { cache: 'no-store', signal: controller.signal }).then(response => response.json()).then(data => {
       setProvider(data.provider === 'gemini' ? 'gemini' : 'rules');
+      if (data.supabase) {
+        setSupabaseStatus(data.supabase);
+      }
     }).catch(() => {});
-    return () => { controller.abort(); request.current.controller?.abort(); };
+    return () => { controller.abort(); pendingRequest.controller?.abort(); };
   }, []);
 
   useEffect(() => {
     if (!ready) return;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations)); }
+    // Report a failure while synchronizing with external browser storage.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     catch { setNotice('Bộ nhớ trình duyệt không lưu được lịch sử. Hội thoại vẫn hoạt động trong phiên này.'); }
   }, [conversations, ready]);
 
@@ -90,7 +99,7 @@ export function ChatClient() {
 
   return <div className="flex h-dvh w-full overflow-hidden bg-neutral-950 font-sans text-neutral-100 antialiased">
     <ConversationSidebar conversations={conversations} active={active} mobileOpen={mobileSidebar} onClose={() => setMobileSidebar(false)} onNew={() => startChat()}
-      onSelect={id => { cancelPending(); setActiveId(id); setMobileSidebar(false); }} onContext={(persona, date) => startChat(persona, date)} />
+      onSelect={id => { cancelPending(); setActiveId(id); setMobileSidebar(false); }} onContext={(persona, date) => startChat(persona, date)} supabaseStatus={supabaseStatus} />
     <main className="flex min-w-0 flex-1 flex-col">
       {notice && <div role="status" className="flex items-center justify-between gap-3 border-b border-neutral-800 bg-neutral-900 px-4 py-2 text-xs text-neutral-400"><span>{notice}</span><button aria-label="Đóng thông báo" onClick={() => setNotice('')}>×</button></div>}
       <ChatArea key={activeId} messages={active?.messages || []} isLoading={loading || !ready} onSendMessage={sendMessage} onSelectCitation={selectCitation}

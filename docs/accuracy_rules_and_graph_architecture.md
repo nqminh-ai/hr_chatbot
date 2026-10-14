@@ -1,6 +1,6 @@
 # Quy tắc và knowledge graph V2 đang triển khai
 
-Tài liệu này thay thiết kế Mission 2 cũ. Runtime là demo deterministic với mock identity; không có nhánh LLM hoặc graph database. Implementation plan đầy đủ và các migration decision chưa chốt nằm tại `implementation_plan_v2.md`.
+Tài liệu này mô tả backend Python: demo deterministic với mock identity, không có nhánh LLM hoặc graph database. Frontend Next.js có tích hợp Gemini tùy chọn riêng. Implementation plan cũ được lưu trong bản sao local `.cleanup-backups/`; các migration decision chưa chốt nằm trong `data/knowledge.json`.
 
 ```mermaid
 flowchart LR
@@ -41,7 +41,7 @@ flowchart LR
 
 Cạnh: PARENT_OF, MEMBER_OF, APPLIES_AT, HAS_CLAUSE, CITES, DERIVED_FROM khi floor thực sự được dùng, OVERRIDES cho chuỗi override hợp lệ. Không có cạnh tới node bị lọc. `engine/graph_view.py` render projection offline; chọn node xem metadata và quan hệ, zoom/cuộn/toàn cảnh. DOT export helper trong `engine/knowledge_graph.py` còn dùng được cho tooling, không phải renderer chính của UI.
 
-Graph thiết kế trong `docs/tracking_graph.html` chứa CAN_OVERRIDE/FLOOR_FOR theo fixture và toàn bộ mock data; đó là tài liệu maintainer, không phải security projection runtime. Tracker lưu progress local và export/import JSON; evidence vẫn cần reviewer kiểm tra.
+Graph thiết kế và tracker HTML cũ đã được lưu trong bản sao local `.cleanup-backups/`. Dữ liệu tracker còn ở `data/improvement_tracking.json`; graph runtime vẫn được dựng từ projection của các chính sách được phép. Evidence mới được tạo local trong `docs/evidence/` và cần reviewer kiểm tra.
 
 ## Phạm vi kiểm chứng
 

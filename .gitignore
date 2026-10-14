@@ -20,6 +20,7 @@ htmlcov/
 node_modules/
 .next/
 *.tsbuildinfo
+.cleanup-backups/
 
 # Editable local database / backups are recreated from the SQL schema and seed.
 data/*.db
@@ -31,13 +32,6 @@ data/exports/
 paper/
 /Mission1_Tri_thuc_noi_bo_Appota_BA_report.pdf
 
-# Generated detailed reports and machine-specific installation inventories.
-# Keep test_results.json, benchmarks and visual evidence as reviewed snapshots.
-docs/evidence/*.log
-docs/evidence/scenarios.json
-docs/evidence/public_test_results.json
-docs/evidence/private_test_results.json
-docs/evidence/detailed_test_results.json
-docs/evidence/source_inventory.json
-docs/evidence/wheel_cache_inventory.json
-docs/evidence/csv_inspection.json
+# Generated local test reports and installation inventories.
+docs/evidence/*
+!docs/evidence/.gitkeep

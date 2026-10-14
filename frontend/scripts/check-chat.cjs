@@ -12,8 +12,8 @@ let externalCalls = 0;
 
 function load(file) {
   if (cache.has(file)) return cache.get(file).exports;
-  const module = { exports: {} };
-  cache.set(file, module);
+  const loadedModule = { exports: {} };
+  cache.set(file, loadedModule);
   const localRequire = createRequire(file);
   const customRequire = name => {
     if (name.startsWith('.')) {
@@ -23,10 +23,10 @@ function load(file) {
     return localRequire(name);
   };
   const compiled = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
-  const scope = { module, exports: module.exports, require: customRequire, process: { env: environment }, console,
+  const scope = { module: loadedModule, exports: loadedModule.exports, require: customRequire, process: { env: environment }, console,
     fetch: (...args) => { externalCalls++; return fetchImpl(...args); }, AbortSignal, TextEncoder, URL, Response, Request, setTimeout, clearTimeout };
   new vm.Script(compiled, { filename: file }).runInNewContext(scope);
-  return module.exports;
+  return loadedModule.exports;
 }
 
 async function main() {

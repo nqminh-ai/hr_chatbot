@@ -13,6 +13,7 @@ Kiểm tra:
 
 ```powershell
 npm run test:chat
+npm run lint
 npm run build
 ```
 
@@ -37,5 +38,9 @@ Khi Gemini lỗi, API trả kết quả đối chiếu cùng thông báo fallbac
 ## Vercel
 
 Import repo, đặt Root Directory là `frontend`, Framework là Next.js. Build/install/output dùng mặc định (`npm run build`, `npm ci`, `.next`). Bật Include files outside the Root Directory in the Build Step để Next.js đọc JSON seed ở thư mục cha. Không cần Supabase để chạy bản này.
+
+Key đã lưu ở `.env.local` chỉ dùng trên máy local. Thêm các biến Gemini vào Environment Variables của Vercel cho môi trường deploy và redeploy sau khi đổi biến. Xem [Vercel Environment Variables](https://vercel.com/docs/environment-variables).
+
+Backend Python ở thư mục cha được giữ nguyên; chat Next.js hiện dùng `src/lib/policy.server.ts` và chưa gọi API Python. Schema/seed Supabase và client được giữ cho lần tích hợp tiếp theo. Chi tiết cấu trúc và chạy backend ở [README của project](../README.md).
 
 Nguồn: [Gemini terms](https://ai.google.dev/gemini-api/terms), [Gemini generateContent](https://ai.google.dev/api/generate-content). Fine-tune không phải biện pháp bảo mật; nếu công ty yêu cầu không gửi dữ liệu cho nhà cung cấp ngoài, cần triển khai model trên hạ tầng được công ty kiểm soát.

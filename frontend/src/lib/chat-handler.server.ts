@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { geminiAnswer, geminiEnabled } from './gemini.server';
 import { isSampleDataset, policyAnswer, today, validDate, type HistoryTurn } from './policy.server';
 
+import { checkSupabaseConnection } from './supabase';
+
 const headers = { 'Cache-Control': 'no-store' };
 
 export async function GET() {
-  return NextResponse.json({ provider: geminiEnabled() ? 'gemini' : 'rules', sampleData: isSampleDataset, date: today() }, { headers });
+  const supabaseStatus = await checkSupabaseConnection();
+  return NextResponse.json({
+    provider: geminiEnabled() ? 'gemini' : 'rules',
+    sampleData: isSampleDataset,
+    date: today(),
+    supabase: supabaseStatus
+  }, { headers });
 }
 
 export async function POST(req: NextRequest) {
@@ -35,6 +43,8 @@ export async function POST(req: NextRequest) {
         notice = 'Gemini chưa phản hồi. Mình đang hiển thị kết quả đối chiếu từ dữ liệu mẫu.';
       }
     }
+    // Internal policy facts are intentionally excluded from the public response.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { facts: _facts, ...response } = result;
     return NextResponse.json({ ...response, provider, notice }, { headers });
   } catch {

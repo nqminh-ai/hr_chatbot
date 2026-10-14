@@ -10,11 +10,17 @@ Import repo `nqminh-ai/hr_chatbot` trên Vercel và đặt **Root Directory = fr
 
 Gemini tắt mặc định. Khi bật, API gửi các điều khoản đã lọc cùng câu hỏi/ngữ cảnh liên quan; dữ liệu vẫn được gửi ra Google. Bộ chính sách hiện là mẫu, không cần Supabase để chạy. Chưa có đăng nhập thật hay đồng bộ lịch sử qua database.
 
-Xem [frontend/README.md](frontend/README.md) và [hướng dẫn triển khai](DEPLOY_VERCEL_SUPABASE.md) để cấu hình Gemini và kiểm tra. Python API `api/index.py` cùng giao diện `public/` là bản web cũ, vẫn có thể chạy local qua `web_preview.py`; chúng không phải giao diện chat Next.js hiện tại.
+Xem [frontend/README.md](frontend/README.md) để cấu hình Gemini và kiểm tra. Python API `api/index.py` cùng giao diện `public/` vẫn được giữ nguyên và có thể chạy local qua `web_preview.py`.
+
+Key local nằm trong `frontend/.env.local`, được Git bỏ qua. Để dùng Gemini, đặt `GEMINI_ENABLED=true`; chỉ lưu key chưa bật Gemini. Khi deploy, thêm `GEMINI_API_KEY`, `GEMINI_ENABLED` và model đã chọn vào Environment Variables của Vercel, rồi redeploy. Xem [hướng dẫn biến môi trường Vercel](https://vercel.com/docs/environment-variables).
+
+Giữ `supabase/schema.sql`, `supabase/seed.sql`, `scripts/export_sqlite_to_supabase.py` và client `frontend/src/lib/supabase.ts` cho bước tích hợp tiếp theo. Chat hiện chưa đọc Supabase; Vercel chạy API Next.js trong `frontend/src/app/api/chat/`, chưa gọi backend Python.
+
+Các asset Next.js mẫu, sidebar cũ không được import, kế hoạch/báo cáo cũ và cache dư đã được dọn. Bản sao các file đã dọn nằm trong `.cleanup-backups/` ở máy local, không commit. Backend Python, SQLite/CSV, schema, fixture, test và môi trường `.venv` được giữ nguyên. Báo cáo kiểm thử được tạo lại trong `docs/evidence/` và không commit. `vercel.json` ở root vẫn được giữ vì `validate.py` đưa file này vào danh sách kiểm chứng; cấu hình deploy hiện tại nằm trong `frontend/vercel.json`.
 
 ## Chạy trên Windows
 
-Khi đã cài môi trường `.venv`, nhấp đúp `run_app.bat` để mở ứng dụng tại `http://127.0.0.1:8501`. Giữ cửa sổ chạy mở; nhấn `Ctrl+C` để dừng ứng dụng. File chạy dùng Python trong `.venv` của dự án và hiển thị lỗi nếu môi trường chưa sẵn sàng.
+Nhấp đúp `run_frontend.bat` để chạy chat tại `http://localhost:3000`. `run_app.bat` giữ menu chọn Next.js hoặc Streamlit tại `http://127.0.0.1:8501`. Backend Streamlit dùng Python trong `.venv`; nhấn `Ctrl+C` để dừng.
 
 Môi trường local đã kiểm chứng: **CPython 3.14.5 / Windows 11**. `.python-version` ghi nhánh runtime 3.14; `requirements.lock` khóa đủ 43 dependency local trực tiếp và transitive bằng version và SHA-256 wheel. Lock artifact này dành cho Windows/ABI đã kiểm chứng, không dùng cho build Vercel Linux; nền tảng khác cần tạo lock thích hợp. Không dùng `pypdf` vì code không ingest PDF.
 
@@ -35,7 +41,7 @@ Kiểm tra riêng scenario hoặc smoke:
 
 `run_tests.py` trả exit 1 khi có scenario fail, exit 2 khi cấu hình sai. `validate.py` chạy unit/regression/Streamlit AppTest và scenario, ghi test IDs, kết quả và SHA-256 source vào `docs/evidence/`. Ngày trong scenario được cố định cho fixture; ngày mặc định của ứng dụng lấy từ clock Asia/Ho_Chi_Minh.
 
-Lần cài trực tiếp từ package index trong môi trường audit không thành công. Đã kiểm chứng cài offline vào `.venv` sạch từ 43 wheel đúng phiên bản/ABI có sẵn trong pip cache; không sửa hoặc tự build lại wheel. SHA-256 wheel nằm ở `docs/evidence/wheel_manifest.json`; log cài đặt được giữ local và không commit. Wheel binaries không được đưa vào repo; môi trường khác cần index hoặc wheelhouse chứa đúng các phiên bản trong lock.
+Lock chứa version và SHA-256 wheel. Wheel binaries không được đưa vào repo; môi trường khác cần index hoặc wheelhouse chứa đúng các phiên bản trong lock. Báo cáo cài đặt cũ đã được lưu trong bản sao local `.cleanup-backups/`.
 
 ## Dùng ứng dụng và graph
 
@@ -58,7 +64,7 @@ Nhấp đúp **`manage_database.bat`** để kiểm tra/import CSV, export hoặ
 - **Seed và fixture test:** `data/knowledge.json`; lệnh `init` không reset database có sẵn. `run_tests.py --db data/appota.db` kiểm tra database đang chỉnh; không có `--db` thì dùng JSON fixture cố định.
 - **Seed lịch sử giữ nguyên:** `data/documents.json`, `data/organization.json`, `data/personas.json`.
 - **Mẫu thiết kế riêng:** `data/metadata_v2.sample.json` và `data/knowledge_graph.sample.json`. `design_fixture` không thể nạp bằng runtime schema.
-- **Tracker maintainer:** mở `docs/tracking_graph.html` trong trình duyệt; xem `data/improvement_tracking.json` để đối chiếu task, test và evidence. Đây là file thiết kế có nhúng toàn bộ mock data, không được phục vụ cho nhân viên với dữ liệu thật. Runtime graph phân quyền nằm trong ứng dụng.
+- **Tracker maintainer:** `data/improvement_tracking.json` được giữ làm dữ liệu thiết kế; trang HTML/ảnh preview cũ nằm trong bản sao local `.cleanup-backups/`. Runtime graph phân quyền nằm trong ứng dụng.
 
 Các quyết định M01–M06 chưa được content owner xác nhận. Runtime không thay ngày kết thúc v1 A: **28/02/2026 là gap**, trả conflict thay vì dùng nhầm policy Group. “10 ngày” của Team giữ `unspecified_days`, không được mặc định là ngày làm việc. Unlimited được biểu diễn riêng dựa trên text mock, không dùng sentinel 99 để tính số ngày. Approval events là `mock_fixture`; chưa có bằng chứng phê duyệt thật. Khi policy chung và Executive chồng clause ở cùng scope, query chung trả conflict; query nhắm rõ tài liệu vẫn kiểm tra ACL và floor.
 
@@ -73,8 +79,7 @@ Router là lexical cho phạm vi leave-policy hiện có; hỗ trợ clause slot
 ## Kiểm chứng và giới hạn
 
 - `docs/evidence/test_results.json`: số test, test IDs, environment, source hashes và kết quả scenario mới nhất.
-- `docs/evidence/browser_ui.json` và ảnh: kiểm tra render graph trên browser thật ở desktop/mobile.
-- `docs/evidence/benchmark.json`: p50/p95 warm snapshot cho 8 và 1.008 document; không gồm reload I/O, không phải SLO production.
-- `AUDIT_REPORT.md`: báo cáo audit hiện tại ghi 83/100; các tài liệu kế hoạch lưu trữ vẫn nhắc baseline lịch sử 43/100. Chưa có review độc lập.
+- `validate.py` tạo lại báo cáo test; `benchmark.py` tạo lại báo cáo hiệu năng. Kết quả ở `docs/evidence/` là file local được Git bỏ qua.
+- Báo cáo audit, kế hoạch và ảnh kiểm chứng cũ đã được đưa vào bản sao local `.cleanup-backups/`; chúng không phải kết quả kiểm chứng của lần deploy mới.
 
 Lock được kiểm chứng trên Windows/Python nêu trên; nền tảng khác chưa được kiểm chứng. Metadata approval thật, content-owner decisions, SSO và audit storage bền vững là các điều kiện riêng trước khi dùng với dữ liệu thật. Không công bố bảo đảm miễn nhiễm hoặc chống leakage tuyệt đối.

@@ -1,6 +1,6 @@
 # Xác minh artifact của implementation plan V2
 
-> Lưu trữ kết quả lúc lập plan, trước triển khai engine V2. Kết quả thực thi hiện tại nằm ở `docs/evidence/` và `../AUDIT_REPORT.md`; nhận định “code gốc không đổi” bên dưới chỉ áp dụng cho thời điểm lập plan.
+> Lưu trữ kết quả lúc lập plan, trước triển khai engine V2. Báo cáo audit và ảnh preview cũ đã được lưu trong bản sao local `.cleanup-backups/`. `validate.py` tạo kết quả thực thi mới trong `docs/evidence/`; nhận định “code gốc không đổi” bên dưới chỉ áp dụng cho thời điểm lập plan.
 
 Ngày: 13/10/2026. Chỉ kiểm tra các artifact vừa tạo; **không import/chạy engine, app.py, run_tests.py hay smoke_test.py**. Không cài dependency, không sửa dữ liệu đang hoạt động hoặc audit baseline.
 
@@ -13,7 +13,7 @@ Ngày: 13/10/2026. Chỉ kiểm tra các artifact vừa tạo; **không import/c
 | Dependency DAG | Pass | 19 task; không có cycle hoặc dependency tới task không tồn tại; tổng điểm thu hồi 57. |
 | JavaScript syntax | Pass | Node.js `vm.Script` parse phần JavaScript của HTML. |
 | Browser interactions | **17/17 pass ở mỗi viewport** | Microsoft Edge headless 155.0.4283.45, hai viewport CSS thực tế 1459px và 481px. |
-| Visual inspection | Đã xem screenshot desktop | Graph, legend, panel và nút toàn cảnh hiển thị; preview tại `tracking_graph_preview.png`. Không chứng nhận mobile device thật hoặc toàn bộ trình đọc màn hình. |
+| Visual inspection | Đã xem screenshot desktop | Graph, legend, panel và nút toàn cảnh hiển thị; ảnh preview cũ được lưu trong bản sao local `.cleanup-backups/`. Không chứng nhận mobile device thật hoặc toàn bộ trình đọc màn hình. |
 | Production source/data | Không thay đổi | SHA-256 của 16 file baseline khớp `data/improvement_tracking.json → baseline.source_sha256`. |
 | Điểm audit ứng dụng | **Vẫn 43/100** | Không có implementation fixes hay re-audit; các task nguồn vẫn `planned`. |
 

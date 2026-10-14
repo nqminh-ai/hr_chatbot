@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Citation, KnowledgeGraphData } from '@/types';
-import { X, FileText, Share2, Terminal, CheckCircle2, AlertTriangle, Layers } from 'lucide-react';
+import { X, FileText, Share2, Terminal, CheckCircle2, Layers } from 'lucide-react';
 
 interface InspectorDrawerProps {
   isOpen: boolean;

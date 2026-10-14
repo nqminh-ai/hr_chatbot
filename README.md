@@ -1,85 +1,141 @@
-# Appota Internal Knowledge V2
+# Appota Knowledge Copilot
 
-Demo chatbot chính sách nghỉ phép. Bản chat Next.js dùng JSON seed và tích hợp Gemini tùy chọn; bản Streamlit local dùng rule engine Python/SQLite. Gemini tắt mặc định; chưa có vector DB hoặc SSO thật. Dữ liệu là mock; không đưa ứng dụng này vào sử dụng với dữ liệu nhân sự thật khi chưa tích hợp xác thực, governance và review bảo mật phù hợp.
+Demo trợ lý tra cứu chính sách nghỉ phép, có hội thoại nhiều lượt, trích dẫn điều khoản và sơ đồ tri thức. Giao diện chính là Next.js để deploy lên Vercel; backend Python/Streamlit và công cụ quản trị SQLite được giữ để chạy local và kiểm thử.
 
-## Chatbot và deploy lên Vercel
+## Trạng thái hiện tại
 
-Bản chat hiện tại nằm trong `frontend/`: hội thoại nhiều lượt, câu hỏi nối tiếp, lịch sử lưu trên trình duyệt và nguồn theo từng câu trả lời. Thiết lập nhân sự/ngày áp dụng được thu gọn; đổi bối cảnh mở cuộc trò chuyện mới.
+| Thành phần | Cách hoạt động |
+| --- | --- |
+| Chat Next.js | API `/api/chat` chạy trong Next.js, đối chiếu chính sách từ `data/knowledge.json` bằng `frontend/src/lib/policy.server.ts`. |
+| Gemini | Tùy chọn; chỉ bật khi có API key và `GEMINI_ENABLED=true`. Khi gọi model lỗi, ứng dụng trả kết quả đối chiếu điều khoản. |
+| Supabase | Đã có client và kiểm tra kết nối bằng truy vấn bảng `personas`. Chưa dùng Supabase để trả lời chính sách hoặc lưu lịch sử chat. |
+| Lịch sử hội thoại | Lưu trong `localStorage` của trình duyệt hiện tại. |
+| Backend Python | Rule engine trong `engine/`, giao diện Streamlit trong `app.py`, API Python trong `api/index.py`. Next.js chưa gọi API Python. |
+| Dữ liệu | Bộ chính sách và nhân sự mẫu; lựa chọn persona là bối cảnh tra cứu mẫu, chưa có đăng nhập/SSO thật. |
 
-Import repo `nqminh-ai/hr_chatbot` trên Vercel và đặt **Root Directory = frontend**, **Framework Preset = Next.js**. Giữ build/install/output mặc định của Next.js và bật tùy chọn cho phép build đọc file ngoài Root Directory để lấy JSON seed tại `data/knowledge.json`.
+## Chạy chatbot local
 
-Gemini tắt mặc định. Khi bật, API gửi các điều khoản đã lọc cùng câu hỏi/ngữ cảnh liên quan; dữ liệu vẫn được gửi ra Google. Bộ chính sách hiện là mẫu, không cần Supabase để chạy. Chưa có đăng nhập thật hay đồng bộ lịch sử qua database.
+Cần Node.js từ **20.9.0** trở lên theo yêu cầu của phiên bản Next.js trong project. Chạy từ thư mục gốc bằng PowerShell:
 
-Xem [frontend/README.md](frontend/README.md) để cấu hình Gemini và kiểm tra. Python API `api/index.py` cùng giao diện `public/` vẫn được giữ nguyên và có thể chạy local qua `web_preview.py`.
+```powershell
+cd frontend
+npm.cmd ci
+if (!(Test-Path .env.local)) { Copy-Item .env.example .env.local }
+npm.cmd run dev
+```
 
-Key local nằm trong `frontend/.env.local`, được Git bỏ qua. Để dùng Gemini, đặt `GEMINI_ENABLED=true`; chỉ lưu key chưa bật Gemini. Khi deploy, thêm `GEMINI_API_KEY`, `GEMINI_ENABLED` và model đã chọn vào Environment Variables của Vercel, rồi redeploy. Xem [hướng dẫn biến môi trường Vercel](https://vercel.com/docs/environment-variables).
+Mở `http://localhost:3000`. Lệnh tạo `.env.local` ở trên giữ nguyên file nếu bạn đã lưu API key. Chỉnh biến môi trường trong file này rồi khởi động lại server.
 
-Giữ `supabase/schema.sql`, `supabase/seed.sql`, `scripts/export_sqlite_to_supabase.py` và client `frontend/src/lib/supabase.ts` cho bước tích hợp tiếp theo. Chat hiện chưa đọc Supabase; Vercel chạy API Next.js trong `frontend/src/app/api/chat/`, chưa gọi backend Python.
+Trên Windows, có thể dùng `run_frontend.bat` để chạy Next.js. `run_app.bat` có menu chọn Next.js hoặc Streamlit.
 
-Các asset Next.js mẫu, sidebar cũ không được import, kế hoạch/báo cáo cũ và cache dư đã được dọn. Bản sao các file đã dọn nằm trong `.cleanup-backups/` ở máy local, không commit. Backend Python, SQLite/CSV, schema, fixture, test và môi trường `.venv` được giữ nguyên. Báo cáo kiểm thử được tạo lại trong `docs/evidence/` và không commit. `vercel.json` ở root vẫn được giữ vì `validate.py` đưa file này vào danh sách kiểm chứng; cấu hình deploy hiện tại nằm trong `frontend/vercel.json`.
+Cấu hình Gemini, Supabase và xử lý lỗi được mô tả trong [frontend/README.md](frontend/README.md).
 
-## Chạy trên Windows
+## Deploy lên Vercel
 
-Nhấp đúp `run_frontend.bat` để chạy chat tại `http://localhost:3000`. `run_app.bat` giữ menu chọn Next.js hoặc Streamlit tại `http://127.0.0.1:8501`. Backend Streamlit dùng Python trong `.venv`; nhấn `Ctrl+C` để dừng.
+Import repository `nqminh-ai/hr_chatbot`, sau đó cấu hình:
 
-Môi trường local đã kiểm chứng: **CPython 3.14.5 / Windows 11**. `.python-version` ghi nhánh runtime 3.14; `requirements.lock` khóa đủ 43 dependency local trực tiếp và transitive bằng version và SHA-256 wheel. Lock artifact này dành cho Windows/ABI đã kiểm chứng, không dùng cho build Vercel Linux; nền tảng khác cần tạo lock thích hợp. Không dùng `pypdf` vì code không ingest PDF.
+| Thiết lập | Giá trị |
+| --- | --- |
+| Root Directory | `frontend` |
+| Framework Preset | `Next.js` |
+| Install Command | Mặc định theo npm lockfile; có thể đặt `npm ci`. |
+| Build Command | `npm run build` |
+| Output Directory | Mặc định của Next.js (`.next`). |
+| Include files outside the Root Directory in the Build Step | **Bật**, vì Next.js import `../data/knowledge.json`. |
+
+Giữ cấu hình [frontend/vercel.json](frontend/vercel.json) và [frontend/next.config.ts](frontend/next.config.ts). `vercel.json` ở root được giữ cho cấu hình chạy từ root và danh sách fingerprint của `validate.py`; hướng dẫn này dùng Root Directory `frontend`. Xem [Vercel Build Settings](https://vercel.com/docs/builds/configure-a-build).
+
+Thêm biến môi trường tại **Project Settings → Environment Variables** cho môi trường cần deploy:
+
+- Gemini: `GEMINI_ENABLED`, `GEMINI_API_KEY`, `GEMINI_MODEL`.
+- Supabase, nếu dùng kiểm tra kết nối: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+
+`.env.local` được Git bỏ qua và không được tải lên qua GitHub. Sau khi đổi biến trên Vercel, tạo deployment mới. Biến `NEXT_PUBLIC_*` được dùng ở bước build; xem [Vercel Environment Variables](https://vercel.com/docs/environment-variables).
+
+Với cấu hình này, Vercel triển khai giao diện và API **Next.js**. Không cần cài Python, Streamlit hay SQLite cho deployment này.
+
+## Backend Python local
+
+Backend, schema, dữ liệu và test Python được giữ nguyên. Môi trường đã kiểm chứng là CPython 3.14.5 trên Windows; `.python-version` ghi nhánh `3.14`. `requirements.lock` chứa version và SHA-256 wheel cho môi trường Windows đã kiểm chứng, không dùng lock này để cài dependency trên Vercel Linux.
+
+Chạy từ thư mục gốc:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.lock
 .\.venv\Scripts\python.exe -B manage_database.py init
-.\.venv\Scripts\python.exe -B validate.py
-.\.venv\Scripts\python.exe -B -m streamlit run app.py
+.\.venv\Scripts\python.exe -B -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501
 ```
 
-Kiểm tra riêng scenario hoặc smoke:
+Mở `http://127.0.0.1:8501`. `init` tạo database từ JSON seed nếu chưa có, không reset database có sẵn. Khi `.venv` đã cài, chọn Streamlit trong `run_app.bat` để chạy.
+
+Giao diện web Python riêng trong `public/` có thể chạy bằng:
 
 ```powershell
-.\.venv\Scripts\python.exe -B run_tests.py
-.\.venv\Scripts\python.exe -B smoke_test.py
+.\.venv\Scripts\python.exe -B web_preview.py
 ```
 
-`run_tests.py` trả exit 1 khi có scenario fail, exit 2 khi cấu hình sai. `validate.py` chạy unit/regression/Streamlit AppTest và scenario, ghi test IDs, kết quả và SHA-256 source vào `docs/evidence/`. Ngày trong scenario được cố định cho fixture; ngày mặc định của ứng dụng lấy từ clock Asia/Ho_Chi_Minh.
+Mở `http://127.0.0.1:8000`; giao diện này dùng API `/api` và khác với chat Next.js.
 
-Lock chứa version và SHA-256 wheel. Wheel binaries không được đưa vào repo; môi trường khác cần index hoặc wheelhouse chứa đúng các phiên bản trong lock. Báo cáo cài đặt cũ đã được lưu trong bản sao local `.cleanup-backups/`.
+## Dữ liệu và Supabase
 
-## Dùng ứng dụng và graph
+| Đường dẫn | Vai trò |
+| --- | --- |
+| `data/knowledge.json` | Seed/fixture của backend và nguồn chính sách hiện tại của Next.js. |
+| `data/appota.db` | Database SQLite local của Streamlit; không commit. |
+| `data/csv/` | 9 bảng CSV cho kiểm tra, import và export dữ liệu SQLite. |
+| `database/`, `schemas/` | Schema SQL, JSON Schema và truy vấn quản trị backend. |
+| `data/documents.json`, `data/organization.json`, `data/personas.json` | Các nguồn mẫu được giữ để đối chiếu nguồn dữ liệu. |
+| `supabase/schema.sql`, `supabase/seed.sql` | Schema PostgreSQL và seed mẫu để chuẩn bị tích hợp Supabase. |
+| `scripts/export_sqlite_to_supabase.py` | Xuất SQLite local thành `supabase/seed.sql`; không tự tải dữ liệu lên Supabase. |
 
-Danh sách scenario và hướng dẫn kiểm thử ở [docs/test_cases.md](docs/test_cases.md). Bộ private riêng nằm tại `tests/private_test_cases.json`; nhấp đúp `run_private_tests.bat` để chạy và lưu kết quả ở `docs/evidence/private_test_results.json`.
+Dùng `manage_database.bat` hoặc `manage_database.py` để quản trị SQLite. Sửa CSV cần kiểm tra và import trước khi Streamlit nhận thay đổi. Import SQLite hoặc chỉnh Supabase **không tự cập nhật** JSON mà Next.js đang đọc. Chi tiết ở [docs/database.md](docs/database.md).
 
-1. Chọn persona và ngày nghiệp vụ. Persona chooser chỉ là mock identity.
-2. Gửi câu hỏi nghỉ phép; xem `answered`, `refused`, `insufficient_evidence`, `conflict` hoặc trạng thái yêu cầu làm rõ.
-3. Tab **Sơ đồ tri thức** có zoom, toàn cảnh, cuộn và chọn node để xem metadata/quan hệ. Graph chỉ được tạo từ policy được phép, cùng snapshot với câu trả lời.
-4. **Xuất graph JSON** tải projection của request hiện tại. Không có endpoint/UI hiển thị tổng kho hoặc các document bị từ chối.
-5. Tab **Trace & nguồn** cho biết clause được dùng, quyết định floor và snapshot; trace không ghi raw query. Trace hiện tại là dữ liệu trả về request, chưa có backend audit-log bền vững.
+Để tạo lại seed Supabase từ database local:
 
-Đổi persona, ngày hoặc content snapshot xóa kết quả cũ trong session. Dataset/schema invalid khiến hệ thống fail closed; UI không hiển thị diagnostic nội bộ.
+```powershell
+.\.venv\Scripts\python.exe -B scripts/export_sqlite_to_supabase.py
+```
 
-## Dữ liệu và migration
+Hướng dẫn nạp schema/seed và kiểm tra kết nối nằm trong [frontend/README.md](frontend/README.md#supabase).
 
-Nhấp đúp **`manage_database.bat`** để kiểm tra/import CSV, export hoặc backup. Bắt đầu thử với `data/csv/clauses.csv`: sửa typed value, kiểm tra CSV, import, rồi tải lại ứng dụng. Hướng dẫn đầy đủ và sơ đồ quan hệ bảng ở [docs/database.md](docs/database.md). Schema SQL ở `database/schema.sql`, truy vấn quản trị mẫu ở `database/queries.sql`.
+## Kiểm tra
 
-- **Active mock runtime:** `data/appota.db` (SQLite). Dataset đọc từ DB được validate bởi `schemas/knowledge_runtime_v2.schema.json`; metadata vẫn là `artifact_kind=mock_runtime`.
-- **CSV quản trị:** 9 file trong `data/csv/`. Sửa CSV chưa đổi runtime; import hợp lệ tạo backup, thay bộ dữ liệu trong transaction và ghi revision/hash vào `import_log`.
-- **Seed và fixture test:** `data/knowledge.json`; lệnh `init` không reset database có sẵn. `run_tests.py --db data/appota.db` kiểm tra database đang chỉnh; không có `--db` thì dùng JSON fixture cố định.
-- **Seed lịch sử giữ nguyên:** `data/documents.json`, `data/organization.json`, `data/personas.json`.
-- **Mẫu thiết kế riêng:** `data/metadata_v2.sample.json` và `data/knowledge_graph.sample.json`. `design_fixture` không thể nạp bằng runtime schema.
-- **Tracker maintainer:** `data/improvement_tracking.json` được giữ làm dữ liệu thiết kế; trang HTML/ảnh preview cũ nằm trong bản sao local `.cleanup-backups/`. Runtime graph phân quyền nằm trong ứng dụng.
+Frontend, chạy trong `frontend/`:
 
-Các quyết định M01–M06 chưa được content owner xác nhận. Runtime không thay ngày kết thúc v1 A: **28/02/2026 là gap**, trả conflict thay vì dùng nhầm policy Group. “10 ngày” của Team giữ `unspecified_days`, không được mặc định là ngày làm việc. Unlimited được biểu diễn riêng dựa trên text mock, không dùng sentinel 99 để tính số ngày. Approval events là `mock_fixture`; chưa có bằng chứng phê duyệt thật. Khi policy chung và Executive chồng clause ở cùng scope, query chung trả conflict; query nhắm rõ tài liệu vẫn kiểm tra ACL và floor.
+```powershell
+npm.cmd run test:chat
+npm.cmd run lint
+npm.cmd run build
+```
 
-## Kiến trúc
+`test:chat` mock các lời gọi Gemini, không kiểm chứng API key hay model thật.
 
-`CSV → validation/import transaction → SQLite → validated immutable snapshot → identity → ACL/contract/audience/scope → as-of version → clause resolution → typed floor → render/citations → authorized graph/trace`.
+Backend, chạy từ thư mục gốc:
 
-Tất cả consumers dùng snapshot bất biến. SQLite được đọc trong một read transaction; fingerprint tính từ nội dung dataset tái dựng và schema, nhận cả thay đổi SQL trực tiếp. Mỗi request giữ một snapshot riêng để tránh reload giữa chừng. Streamlit cache theo nội dung data/schema, tối đa hai snapshot; cần rerun/tải lại sau khi import. Numeric text được render từ giá trị effective; floor thay cả clause và source. Citations theo clause, không dedup làm mất approver/contingency.
+```powershell
+.\.venv\Scripts\python.exe -B -m unittest discover -s tests -p "test_*.py"
+.\.venv\Scripts\python.exe -B run_tests.py
+.\.venv\Scripts\python.exe -B validate.py
+```
 
-Router là lexical cho phạm vi leave-policy hiện có; hỗ trợ clause slots, ngày/năm, policy/version và alias unit. Không phải mô hình hiểu mọi câu tiếng Việt. Phép nghỉ/operation ngoài các slot đã hỗ trợ cần hỏi lại hoặc bổ sung taxonomy; không suy diễn quyền xử lý ngoại lệ. Bảo lưu/chuyển ngày phép, nghỉ ốm/thai sản và các operation chưa có dữ liệu trả thiếu căn cứ.
+`validate.py` tạo báo cáo trong `docs/evidence/`; `benchmark.py` tạo báo cáo hiệu năng local. Các báo cáo sinh ra được Git bỏ qua. Scenario dùng ngày cố định; ngày mặc định trong ứng dụng theo `Asia/Ho_Chi_Minh`.
 
-## Kiểm chứng và giới hạn
+## Phạm vi demo
 
-- `docs/evidence/test_results.json`: số test, test IDs, environment, source hashes và kết quả scenario mới nhất.
-- `validate.py` tạo lại báo cáo test; `benchmark.py` tạo lại báo cáo hiệu năng. Kết quả ở `docs/evidence/` là file local được Git bỏ qua.
-- Báo cáo audit, kế hoạch và ảnh kiểm chứng cũ đã được đưa vào bản sao local `.cleanup-backups/`; chúng không phải kết quả kiểm chứng của lần deploy mới.
+Chat hỗ trợ hỏi về số ngày phép, thời hạn báo trước, người duyệt, thời gian hạn chế nghỉ và người trực thay trong bộ dữ liệu mẫu. Đổi nhân sự/ngày áp dụng trong Next.js mở cuộc trò chuyện mới. Nguồn, graph và trace có thể xem theo câu trả lời.
 
-Lock được kiểm chứng trên Windows/Python nêu trên; nền tảng khác chưa được kiểm chứng. Metadata approval thật, content-owner decisions, SSO và audit storage bền vững là các điều kiện riêng trước khi dùng với dữ liệu thật. Không công bố bảo đảm miễn nhiễm hoặc chống leakage tuyệt đối.
+Quy tắc fixture vẫn giữ khoảng trống chính sách A tại **28/02/2026**, đơn vị `unspecified_days` cho quy định báo trước của Team và các quyết định migration M01–M06 chưa được xác nhận. Persona mẫu không thay thế xác thực người dùng. Chưa có đồng bộ hội thoại theo tài khoản, vector database hay audit log bền vững.
+
+Khi bật Gemini, câu hỏi, tối đa 6 câu hỏi trước đó và điều khoản đã lọc được gửi sang Google; không gửi toàn bộ kho hay nội dung assistant từ client. Chỉ dùng dữ liệu mẫu cho cấu hình demo hiện tại. Schema Supabase hiện có policy đọc công khai và policy toàn quyền cho bảng chat, chưa phải phân quyền theo nhân viên.
+
+## Tài liệu
+
+- [Frontend: cấu hình, API và xử lý lỗi](frontend/README.md)
+- [Quản trị database](docs/database.md)
+- [Sơ đồ dữ liệu](docs/data_erd.md)
+- [Quy tắc và kiến trúc backend](docs/accuracy_rules_and_graph_architecture.md)
+- [Scenario kiểm thử](docs/test_cases.md)
+- [Bộ kiểm thử chi tiết](docs/detailed_test_cases.md)
+
+Các kế hoạch, báo cáo và ảnh cũ đã dọn khỏi repository. Bản sao local của đợt dọn nằm trong `.cleanup-backups/` trên máy thực hiện, không được đưa lên GitHub.

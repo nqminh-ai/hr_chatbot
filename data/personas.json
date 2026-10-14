@@ -1,0 +1,42 @@
+{
+  "lan": {
+    "user_id": "lan",
+    "name": "Lan",
+    "company": "CTY_A",
+    "department": "DEPT_MKT_A",
+    "team": null,
+    "role": "Staff",
+    "contract_type": "Official",
+    "description": "Nhân viên chính thức, Marketing, Công ty A"
+  },
+  "hung": {
+    "user_id": "hung",
+    "name": "Hùng",
+    "company": "CTY_B",
+    "department": "DEPT_ENG_B",
+    "team": "TEAM_PAY_B",
+    "role": "TeamLead",
+    "contract_type": "Official",
+    "description": "Trưởng nhóm Payments On-call, PB Kỹ thuật, Công ty B"
+  },
+  "mai": {
+    "user_id": "mai",
+    "name": "Mai",
+    "company": "CTY_A",
+    "department": "DEPT_HR_A",
+    "team": null,
+    "role": "HR_Admin",
+    "contract_type": "Official",
+    "description": "HR Admin, PB Nhân sự, Công ty A"
+  },
+  "nam": {
+    "user_id": "nam",
+    "name": "Nam",
+    "company": "CTY_A",
+    "department": "DEPT_MKT_A",
+    "team": null,
+    "role": "Contractor",
+    "contract_type": "Contractor",
+    "description": "Nhà thầu / Cộng tác viên, Marketing, Công ty A"
+  }
+}

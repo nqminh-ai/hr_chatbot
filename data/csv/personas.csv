@@ -1,0 +1,5 @@
+﻿"user_id","position","name","company","department","team","role","contract_type","description"
+"lan","0","Lan","CTY_A","DEPT_MKT_A","\N","Staff","Official","Nhân viên chính thức, Marketing, Công ty A"
+"hung","1","Hùng","CTY_B","DEPT_ENG_B","TEAM_PAY_B","TeamLead","Official","Trưởng nhóm Payments On-call, PB Kỹ thuật, Công ty B"
+"mai","2","Mai","CTY_A","DEPT_HR_A","\N","HR_Admin","Official","HR Admin, PB Nhân sự, Công ty A"
+"nam","3","Nam","CTY_A","DEPT_MKT_A","\N","Contractor","Contractor","Nhà thầu / Cộng tác viên, Marketing, Công ty A"

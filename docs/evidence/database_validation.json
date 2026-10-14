@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-10-14T13:49:04.502176+00:00",
+  "sqlite_version": "3.50.4",
+  "database": {
+    "database": "C:\\Users\\minh4\\OneDrive\\Desktop\\Appota\\data\\appota.db",
+    "schema_version": 1,
+    "dataset_sha256": "027bce33221c99584526a772f1d4bfb30b12e0c73ea9bfb46eefdd65b96be450",
+    "counts": {
+      "dataset_info": 1,
+      "source_hashes": 3,
+      "migration_decisions": 6,
+      "organization": 8,
+      "personas": 4,
+      "documents": 8,
+      "clauses": 16,
+      "lifecycle_events": 9,
+      "supersedes": 1
+    },
+    "last_import_revision": 1
+  },
+  "integrity_check": "ok",
+  "seed_roundtrip_equal": true,
+  "csv_roundtrip_equal": true,
+  "tests_run": 92,
+  "failures": 0,
+  "errors": 0,
+  "public_fixture_scenarios": {
+    "passed": 7,
+    "total": 7
+  },
+  "private_database_scenarios": {
+    "passed": 34,
+    "total": 35,
+    "failed_ids": [
+      "PT32"
+    ]
+  },
+  "coverage_note": "20 database integration tests use temporary databases, including real Streamlit AppTest. Live database remains unchanged mock seed.",
+  "source_sha256": {
+    "manage_database.py": "10864341586d233cb64985d54013af794903ab6462651649d56f447482dd670e",
+    "manage_database.bat": "01d0bf1f498d75c87d0598eaadd550a9bdae9cd139f15ce7c687214b13d19454",
+    "engine/storage.py": "3758e9b72d0acf395200addd4fb2bbafc5735f43203f316644de0c0ec0ec32d3",
+    "engine/tabular.py": "8d6a8ccbfed77ad8a289c1933904e71c75e0a549cb3dc880d2c415f4088de5ad",
+    "database/schema.sql": "339bdef4dbfc35bd0fa51f74e245510fcfc754f1ea1cbab710a69ace64ca4a5a",
+    "database/queries.sql": "af76581c8c5ad0c71a9d16b09bfe9fc782cb201ab5175d1ea0b958a72a23edb9",
+    "docs/database.md": "0e25bc0f5cee6870533425826368e1af4433581cdf81260b1b430a20a418a5f5",
+    "data/csv/clauses.csv": "ff563eb4f04f875ee79fc4f372b42270fbe0247bddd13cd4eea50b38b2174750",
+    "data/csv/dataset_info.csv": "ee435622f052f3f8f747c3cd6f8d77f29712a3d9d307f1d52151c2e107350095",
+    "data/csv/documents.csv": "3078afbbb726a78b90aa8f51c5a84fa85ebc64de7ac8628021a6663b00c0e9dd",
+    "data/csv/lifecycle_events.csv": "e7d2e663fc9ac253e4a60414094b62c0eb531f68695302392f77ca91b0c74eca",
+    "data/csv/migration_decisions.csv": "c9311d17f03c079e935b7480e12216ee9e1386d1513bbe77a4f10e2893a97250",
+    "data/csv/organization.csv": "9a49d0573cec6766d732971f73a47c4ec29ed718f766f15d4ebd15eba355942e",
+    "data/csv/personas.csv": "ecb68149fea834a2d656af914cbe81ec6ea3a6ee843f5bea2b79e6b52206fffd",
+    "data/csv/source_hashes.csv": "371e7ac595a0743368633fc61189444af9c0a1d814dcae1d6356c06482b330d5",
+    "data/csv/supersedes.csv": "40c2b2cf09f5f1d8355a80732f095ced0adeaf76f0920bd7c9548ff3d769914d"
+  }
+}

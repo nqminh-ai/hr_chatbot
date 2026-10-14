@@ -1,0 +1,875 @@
+{
+  "schema_version": "2.0-proposal",
+  "artifact_kind": "design_fixture",
+  "activation_allowed": false,
+  "created_on": "2026-10-13",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "sample_id": "proposal-0e52a2ae30165ae5",
+  "source_sha256": {
+    "data/documents.json": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+    "data/organization.json": "08348a2e777662e1e7544e043db2ddb8b3c7995a1717995928822ff5076ef88e",
+    "data/personas.json": "12cdde6b298d685dc093b12450eb2397f669ab1ceb0a65d47563312bb6b8e4f2"
+  },
+  "migration_decisions": [
+    {
+      "id": "M01",
+      "status": "proposed",
+      "description": "Đề xuất valid_to exclusive 2026-03-01 cho A v1; owner xác nhận trước migration.",
+      "owner": null,
+      "evidence": null
+    },
+    {
+      "id": "M02",
+      "status": "proposed",
+      "description": "10 ngày báo trước của Team chưa rõ working/calendar; giữ unspecified_days.",
+      "owner": null,
+      "evidence": null
+    },
+    {
+      "id": "M03",
+      "status": "proposed",
+      "description": "Chuyển sentinel 99 thành unlimited/null trong mẫu; cần owner xác nhận.",
+      "owner": null,
+      "evidence": null
+    },
+    {
+      "id": "M04",
+      "status": "proposed",
+      "description": "Approval events là synthetic proposal, chưa có bằng chứng lịch sử thật.",
+      "owner": null,
+      "evidence": null
+    },
+    {
+      "id": "M05",
+      "status": "proposed",
+      "description": "Quyền preview Draft HR phải tách khỏi quyền trả lời chính sách.",
+      "owner": null,
+      "evidence": null
+    },
+    {
+      "id": "M06",
+      "status": "proposed",
+      "description": "ACL Executive và audience được hưởng chính sách cần owner xác nhận.",
+      "owner": null,
+      "evidence": null
+    }
+  ],
+  "organization": [
+    {
+      "id": "GRP",
+      "name": "Tập đoàn Alpha",
+      "level": "Group",
+      "parent": null
+    },
+    {
+      "id": "CTY_A",
+      "name": "Công ty A (Alpha Media)",
+      "level": "Company",
+      "parent": "GRP"
+    },
+    {
+      "id": "CTY_B",
+      "name": "Công ty B (Alpha Pay)",
+      "level": "Company",
+      "parent": "GRP"
+    },
+    {
+      "id": "DEPT_MKT_A",
+      "name": "Phòng Marketing (Cty A)",
+      "level": "Department",
+      "parent": "CTY_A"
+    },
+    {
+      "id": "DEPT_HR_A",
+      "name": "Phòng Nhân sự (Cty A)",
+      "level": "Department",
+      "parent": "CTY_A"
+    },
+    {
+      "id": "DEPT_ENG_B",
+      "name": "Phòng Kỹ thuật (Cty B)",
+      "level": "Department",
+      "parent": "CTY_B"
+    },
+    {
+      "id": "DEPT_OPS_B",
+      "name": "Phòng Vận hành (Cty B)",
+      "level": "Department",
+      "parent": "CTY_B"
+    },
+    {
+      "id": "TEAM_PAY_B",
+      "name": "Nhóm Payments On-call (PB Kỹ thuật, Cty B)",
+      "level": "Team",
+      "parent": "DEPT_ENG_B"
+    }
+  ],
+  "personas": [
+    {
+      "user_id": "lan",
+      "name": "Lan",
+      "company": "CTY_A",
+      "department": "DEPT_MKT_A",
+      "team": null,
+      "role": "Staff",
+      "contract_type": "Official",
+      "description": "Nhân viên chính thức, Marketing, Công ty A"
+    },
+    {
+      "user_id": "hung",
+      "name": "Hùng",
+      "company": "CTY_B",
+      "department": "DEPT_ENG_B",
+      "team": "TEAM_PAY_B",
+      "role": "TeamLead",
+      "contract_type": "Official",
+      "description": "Trưởng nhóm Payments On-call, PB Kỹ thuật, Công ty B"
+    },
+    {
+      "user_id": "mai",
+      "name": "Mai",
+      "company": "CTY_A",
+      "department": "DEPT_HR_A",
+      "team": null,
+      "role": "HR_Admin",
+      "contract_type": "Official",
+      "description": "HR Admin, PB Nhân sự, Công ty A"
+    },
+    {
+      "user_id": "nam",
+      "name": "Nam",
+      "company": "CTY_A",
+      "department": "DEPT_MKT_A",
+      "team": null,
+      "role": "Contractor",
+      "contract_type": "Contractor",
+      "description": "Nhà thầu / Cộng tác viên, Marketing, Công ty A"
+    }
+  ],
+  "documents": [
+    {
+      "doc_uid": "POL-GRP-LV@v3.0",
+      "policy_id": "POL-GRP-LV",
+      "version": "v3.0",
+      "title": "Chính sách nghỉ phép Tập đoàn Alpha",
+      "topic": "annual_leave",
+      "scope": {
+        "unit_id": "GRP",
+        "level": "Group"
+      },
+      "lifecycle": {
+        "state": "Approved",
+        "valid_from": "2026-01-01",
+        "valid_to": null,
+        "events": [
+          {
+            "event": "approved",
+            "at": "2026-01-01",
+            "evidence_type": "synthetic_proposal"
+          }
+        ],
+        "history_evidence": "synthetic_proposal"
+      },
+      "access": {
+        "classification": "Internal",
+        "allowed_roles": [],
+        "applies_to": [
+          "Official"
+        ],
+        "audience_roles": [],
+        "deny_on_missing": true
+      },
+      "governance": {
+        "owner_id": "HR_Group",
+        "review_due": null,
+        "review_state": "needs_owner_review"
+      },
+      "provenance": {
+        "source_path": "data/documents.json",
+        "line_start": 2,
+        "line_end": 27,
+        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "source_type": "mock_json"
+      },
+      "supersedes": [],
+      "clauses": [
+        {
+          "clause_id": "POL-GRP-LV@v3.0#entitlement",
+          "key": "entitlement",
+          "label": "Số ngày nghỉ",
+          "text_source": "Nhân sự chính thức toàn Tập đoàn được hưởng tối thiểu 12 ngày phép năm có hưởng lương.",
+          "typed_value": {
+            "kind": "number",
+            "value": 12,
+            "unit": "annual_paid_days"
+          },
+          "render_template": "{value} ngày phép/năm",
+          "is_floor": true,
+          "comparison": "minimum",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 17,
+            "json_pointer": "/0/clauses/entitlement"
+          },
+          "review_flags": []
+        },
+        {
+          "clause_id": "POL-GRP-LV@v3.0#notice_period",
+          "key": "notice_period",
+          "label": "Thời hạn báo trước",
+          "text_source": "Thời gian thông báo nghỉ phép tối thiểu là 2 ngày làm việc.",
+          "typed_value": {
+            "kind": "number",
+            "value": 2,
+            "unit": "business_days"
+          },
+          "render_template": "{value} ngày làm việc",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 22,
+            "json_pointer": "/0/clauses/notice_period"
+          },
+          "review_flags": []
+        }
+      ]
+    },
+    {
+      "doc_uid": "POL-A-LV@v1.0",
+      "policy_id": "POL-A-LV",
+      "version": "v1.0",
+      "title": "Quy chế nghỉ phép Công ty A (Cũ)",
+      "topic": "annual_leave",
+      "scope": {
+        "unit_id": "CTY_A",
+        "level": "Company"
+      },
+      "lifecycle": {
+        "state": "Superseded",
+        "valid_from": "2024-01-01",
+        "valid_to": "2026-03-01",
+        "events": [
+          {
+            "event": "approved",
+            "at": "2024-01-01",
+            "evidence_type": "synthetic_proposal"
+          },
+          {
+            "event": "superseded",
+            "at": "2026-03-01",
+            "evidence_type": "synthetic_proposal"
+          }
+        ],
+        "history_evidence": "synthetic_proposal"
+      },
+      "access": {
+        "classification": "Internal",
+        "allowed_roles": [],
+        "applies_to": [
+          "Official"
+        ],
+        "audience_roles": [],
+        "deny_on_missing": true
+      },
+      "governance": {
+        "owner_id": "HR_A",
+        "review_due": null,
+        "review_state": "needs_owner_review"
+      },
+      "provenance": {
+        "source_path": "data/documents.json",
+        "line_start": 28,
+        "line_end": 52,
+        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "source_type": "mock_json"
+      },
+      "supersedes": [],
+      "clauses": [
+        {
+          "clause_id": "POL-A-LV@v1.0#entitlement",
+          "key": "entitlement",
+          "label": "Số ngày nghỉ",
+          "text_source": "Nhân viên Công ty A được nghỉ 12 ngày phép/năm.",
+          "typed_value": {
+            "kind": "number",
+            "value": 12,
+            "unit": "annual_paid_days"
+          },
+          "render_template": "{value} ngày phép/năm",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 43,
+            "json_pointer": "/1/clauses/entitlement"
+          },
+          "review_flags": []
+        },
+        {
+          "clause_id": "POL-A-LV@v1.0#notice_period",
+          "key": "notice_period",
+          "label": "Thời hạn báo trước",
+          "text_source": "Thông báo trước tối thiểu 3 ngày làm việc.",
+          "typed_value": {
+            "kind": "number",
+            "value": 3,
+            "unit": "business_days"
+          },
+          "render_template": "{value} ngày làm việc",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 47,
+            "json_pointer": "/1/clauses/notice_period"
+          },
+          "review_flags": []
+        }
+      ]
+    },
+    {
+      "doc_uid": "POL-A-LV@v2.0",
+      "policy_id": "POL-A-LV",
+      "version": "v2.0",
+      "title": "Quy chế nghỉ phép Công ty A (Mới)",
+      "topic": "annual_leave",
+      "scope": {
+        "unit_id": "CTY_A",
+        "level": "Company"
+      },
+      "lifecycle": {
+        "state": "Approved",
+        "valid_from": "2026-03-01",
+        "valid_to": null,
+        "events": [
+          {
+            "event": "approved",
+            "at": "2026-03-01",
+            "evidence_type": "synthetic_proposal"
+          }
+        ],
+        "history_evidence": "synthetic_proposal"
+      },
+      "access": {
+        "classification": "Internal",
+        "allowed_roles": [],
+        "applies_to": [
+          "Official"
+        ],
+        "audience_roles": [],
+        "deny_on_missing": true
+      },
+      "governance": {
+        "owner_id": "HR_A",
+        "review_due": null,
+        "review_state": "needs_owner_review"
+      },
+      "provenance": {
+        "source_path": "data/documents.json",
+        "line_start": 53,
+        "line_end": 81,
+        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "source_type": "mock_json"
+      },
+      "supersedes": [
+        "POL-A-LV@v1.0"
+      ],
+      "clauses": [
+        {
+          "clause_id": "POL-A-LV@v2.0#entitlement",
+          "key": "entitlement",
+          "label": "Số ngày nghỉ",
+          "text_source": "Nhân viên chính thức Công ty A được hưởng 14 ngày phép/năm.",
+          "typed_value": {
+            "kind": "number",
+            "value": 14,
+            "unit": "annual_paid_days"
+          },
+          "render_template": "{value} ngày phép/năm",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 68,
+            "json_pointer": "/2/clauses/entitlement"
+          },
+          "review_flags": []
+        },
+        {
+          "clause_id": "POL-A-LV@v2.0#notice_period",
+          "key": "notice_period",
+          "label": "Thời hạn báo trước",
+          "text_source": "Thông báo trước tối thiểu 3 ngày làm việc.",
+          "typed_value": {
+            "kind": "number",
+            "value": 3,
+            "unit": "business_days"
+          },
+          "render_template": "{value} ngày làm việc",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 72,
+            "json_pointer": "/2/clauses/notice_period"
+          },
+          "review_flags": []
+        },
+        {
+          "clause_id": "POL-A-LV@v2.0#approver",
+          "key": "approver",
+          "label": "Người phê duyệt",
+          "text_source": "Đơn nghỉ phép do Quản lý trực tiếp phê duyệt qua cổng HRM.",
+          "typed_value": {
+            "kind": "enum",
+            "value": "LineManager",
+            "unit": "not_applicable"
+          },
+          "render_template": "Đơn nghỉ phép do Quản lý trực tiếp phê duyệt qua cổng HRM.",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 76,
+            "json_pointer": "/2/clauses/approver"
+          },
+          "review_flags": []
+        }
+      ]
+    },
+    {
+      "doc_uid": "POL-B-LV@v1.0",
+      "policy_id": "POL-B-LV",
+      "version": "v1.0",
+      "title": "Quy chế nghỉ phép Công ty B",
+      "topic": "annual_leave",
+      "scope": {
+        "unit_id": "CTY_B",
+        "level": "Company"
+      },
+      "lifecycle": {
+        "state": "Approved",
+        "valid_from": "2025-01-01",
+        "valid_to": null,
+        "events": [
+          {
+            "event": "approved",
+            "at": "2025-01-01",
+            "evidence_type": "synthetic_proposal"
+          }
+        ],
+        "history_evidence": "synthetic_proposal"
+      },
+      "access": {
+        "classification": "Internal",
+        "allowed_roles": [],
+        "applies_to": [
+          "Official"
+        ],
+        "audience_roles": [],
+        "deny_on_missing": true
+      },
+      "governance": {
+        "owner_id": "HR_B",
+        "review_due": null,
+        "review_state": "needs_owner_review"
+      },
+      "provenance": {
+        "source_path": "data/documents.json",
+        "line_start": 82,
+        "line_end": 110,
+        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "source_type": "mock_json"
+      },
+      "supersedes": [],
+      "clauses": [
+        {
+          "clause_id": "POL-B-LV@v1.0#entitlement",
+          "key": "entitlement",
+          "label": "Số ngày nghỉ",
+          "text_source": "Nhân sự Công ty B được hưởng 12 ngày phép/năm.",
+          "typed_value": {
+            "kind": "number",
+            "value": 12,
+            "unit": "annual_paid_days"
+          },
+          "render_template": "{value} ngày phép/năm",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 97,
+            "json_pointer": "/3/clauses/entitlement"
+          },
+          "review_flags": []
+        },
+        {
+          "clause_id": "POL-B-LV@v1.0#notice_period",
+          "key": "notice_period",
+          "label": "Thời hạn báo trước",
+          "text_source": "Phải báo trước tối thiểu 5 ngày làm việc.",
+          "typed_value": {
+            "kind": "number",
+            "value": 5,
+            "unit": "business_days"
+          },
+          "render_template": "{value} ngày làm việc",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 101,
+            "json_pointer": "/3/clauses/notice_period"
+          },
+          "review_flags": []
+        },
+        {
+          "clause_id": "POL-B-LV@v1.0#approver",
+          "key": "approver",
+          "label": "Người phê duyệt",
+          "text_source": "Trưởng phòng ban phê duyệt đơn nghỉ phép.",
+          "typed_value": {
+            "kind": "enum",
+            "value": "DepartmentHead",
+            "unit": "not_applicable"
+          },
+          "render_template": "Trưởng phòng ban phê duyệt đơn nghỉ phép.",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 105,
+            "json_pointer": "/3/clauses/approver"
+          },
+          "review_flags": []
+        }
+      ]
+    },
+    {
+      "doc_uid": "GUD-B-ENG-LV@v1.0",
+      "policy_id": "GUD-B-ENG-LV",
+      "version": "v1.0",
+      "title": "Hướng dẫn nghỉ phép Phòng Kỹ thuật Công ty B",
+      "topic": "annual_leave",
+      "scope": {
+        "unit_id": "DEPT_ENG_B",
+        "level": "Department"
+      },
+      "lifecycle": {
+        "state": "Approved",
+        "valid_from": "2025-06-01",
+        "valid_to": null,
+        "events": [
+          {
+            "event": "approved",
+            "at": "2025-06-01",
+            "evidence_type": "synthetic_proposal"
+          }
+        ],
+        "history_evidence": "synthetic_proposal"
+      },
+      "access": {
+        "classification": "Internal",
+        "allowed_roles": [],
+        "applies_to": [
+          "Official"
+        ],
+        "audience_roles": [],
+        "deny_on_missing": true
+      },
+      "governance": {
+        "owner_id": "Head_ENG_B",
+        "review_due": null,
+        "review_state": "needs_owner_review"
+      },
+      "provenance": {
+        "source_path": "data/documents.json",
+        "line_start": 111,
+        "line_end": 135,
+        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "source_type": "mock_json"
+      },
+      "supersedes": [],
+      "clauses": [
+        {
+          "clause_id": "GUD-B-ENG-LV@v1.0#notice_period",
+          "key": "notice_period",
+          "label": "Thời hạn báo trước",
+          "text_source": "Nhân sự kỹ thuật phải báo trước tối thiểu 7 ngày làm việc để sắp xếp bàn giao sprint.",
+          "typed_value": {
+            "kind": "number",
+            "value": 7,
+            "unit": "business_days"
+          },
+          "render_template": "{value} ngày làm việc",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 126,
+            "json_pointer": "/4/clauses/notice_period"
+          },
+          "review_flags": []
+        },
+        {
+          "clause_id": "GUD-B-ENG-LV@v1.0#blackout_period",
+          "key": "blackout_period",
+          "label": "Thời gian cấm nghỉ",
+          "text_source": "Không được nghỉ phép trong tuần Release hệ thống sản phẩm trọng điểm.",
+          "typed_value": {
+            "kind": "enum",
+            "value": "ReleaseWeek",
+            "unit": "not_applicable"
+          },
+          "render_template": "Không được nghỉ phép trong tuần Release hệ thống sản phẩm trọng điểm.",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 130,
+            "json_pointer": "/4/clauses/blackout_period"
+          },
+          "review_flags": []
+        }
+      ]
+    },
+    {
+      "doc_uid": "GUD-B-PAY-LV@v1.0",
+      "policy_id": "GUD-B-PAY-LV",
+      "version": "v1.0",
+      "title": "Quy định trực On-call và Nghỉ phép Nhóm Payments",
+      "topic": "annual_leave",
+      "scope": {
+        "unit_id": "TEAM_PAY_B",
+        "level": "Team"
+      },
+      "lifecycle": {
+        "state": "Approved",
+        "valid_from": "2025-09-01",
+        "valid_to": null,
+        "events": [
+          {
+            "event": "approved",
+            "at": "2025-09-01",
+            "evidence_type": "synthetic_proposal"
+          }
+        ],
+        "history_evidence": "synthetic_proposal"
+      },
+      "access": {
+        "classification": "Internal",
+        "allowed_roles": [],
+        "applies_to": [
+          "Official"
+        ],
+        "audience_roles": [],
+        "deny_on_missing": true
+      },
+      "governance": {
+        "owner_id": "Lead_PAY_B",
+        "review_due": null,
+        "review_state": "needs_owner_review"
+      },
+      "provenance": {
+        "source_path": "data/documents.json",
+        "line_start": 136,
+        "line_end": 160,
+        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "source_type": "mock_json"
+      },
+      "supersedes": [],
+      "clauses": [
+        {
+          "clause_id": "GUD-B-PAY-LV@v1.0#notice_period",
+          "key": "notice_period",
+          "label": "Thời hạn báo trước",
+          "text_source": "Thành viên nhóm trực Payments On-call phải đăng ký lịch nghỉ trước tối thiểu 10 ngày.",
+          "typed_value": {
+            "kind": "number",
+            "value": 10,
+            "unit": "unspecified_days"
+          },
+          "render_template": "{value} ngày (chưa xác nhận loại ngày)",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 151,
+            "json_pointer": "/5/clauses/notice_period"
+          },
+          "review_flags": [
+            "M02"
+          ]
+        },
+        {
+          "clause_id": "GUD-B-PAY-LV@v1.0#contingency",
+          "key": "contingency",
+          "label": "Điều kiện trực thay",
+          "text_source": "Nghỉ phép bắt buộc phải có người trực On-call thay thế được chỉ định và xác nhận trong nhóm.",
+          "typed_value": {
+            "kind": "enum",
+            "value": "BackupRequired",
+            "unit": "not_applicable"
+          },
+          "render_template": "Nghỉ phép bắt buộc phải có người trực On-call thay thế được chỉ định và xác nhận trong nhóm.",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 155,
+            "json_pointer": "/5/clauses/contingency"
+          },
+          "review_flags": []
+        }
+      ]
+    },
+    {
+      "doc_uid": "DRF-A-HR-LV@v0.9",
+      "policy_id": "DRF-A-HR-LV",
+      "version": "v0.9",
+      "title": "Dự thảo chính sách phúc lợi nghỉ phép 2027 Công ty A",
+      "topic": "annual_leave",
+      "scope": {
+        "unit_id": "DEPT_HR_A",
+        "level": "Department"
+      },
+      "lifecycle": {
+        "state": "Draft",
+        "valid_from": "2027-01-01",
+        "valid_to": null,
+        "events": [
+          {
+            "event": "drafted",
+            "at": "2027-01-01",
+            "evidence_type": "synthetic_proposal"
+          }
+        ],
+        "history_evidence": "synthetic_proposal"
+      },
+      "access": {
+        "classification": "Internal",
+        "allowed_roles": [
+          "HR_Admin"
+        ],
+        "applies_to": [
+          "Official"
+        ],
+        "audience_roles": [],
+        "deny_on_missing": true
+      },
+      "governance": {
+        "owner_id": "HR_A",
+        "review_due": null,
+        "review_state": "needs_owner_review"
+      },
+      "provenance": {
+        "source_path": "data/documents.json",
+        "line_start": 161,
+        "line_end": 181,
+        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "source_type": "mock_json"
+      },
+      "supersedes": [],
+      "clauses": [
+        {
+          "clause_id": "DRF-A-HR-LV@v0.9#entitlement",
+          "key": "entitlement",
+          "label": "Số ngày nghỉ",
+          "text_source": "Đề xuất nâng số ngày nghỉ phép năm lên 16 ngày cho toàn thể nhân viên.",
+          "typed_value": {
+            "kind": "number",
+            "value": 16,
+            "unit": "annual_paid_days"
+          },
+          "render_template": "{value} ngày phép/năm",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 176,
+            "json_pointer": "/6/clauses/entitlement"
+          },
+          "review_flags": []
+        }
+      ]
+    },
+    {
+      "doc_uid": "POL-A-LV-EXEC@v1.0",
+      "policy_id": "POL-A-LV-EXEC",
+      "version": "v1.0",
+      "title": "Quy chế nghỉ phép đặc biệt dành cho Cấp Lãnh đạo Công ty A",
+      "topic": "annual_leave",
+      "scope": {
+        "unit_id": "CTY_A",
+        "level": "Company"
+      },
+      "lifecycle": {
+        "state": "Approved",
+        "valid_from": "2026-01-01",
+        "valid_to": null,
+        "events": [
+          {
+            "event": "approved",
+            "at": "2026-01-01",
+            "evidence_type": "synthetic_proposal"
+          }
+        ],
+        "history_evidence": "synthetic_proposal"
+      },
+      "access": {
+        "classification": "Confidential",
+        "allowed_roles": [
+          "Executive",
+          "Board"
+        ],
+        "applies_to": [
+          "Official"
+        ],
+        "audience_roles": [
+          "Executive",
+          "Board"
+        ],
+        "deny_on_missing": true
+      },
+      "governance": {
+        "owner_id": "BOD_A",
+        "review_due": null,
+        "review_state": "needs_owner_review"
+      },
+      "provenance": {
+        "source_path": "data/documents.json",
+        "line_start": 182,
+        "line_end": 202,
+        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "source_type": "mock_json"
+      },
+      "supersedes": [],
+      "clauses": [
+        {
+          "clause_id": "POL-A-LV-EXEC@v1.0#entitlement",
+          "key": "entitlement",
+          "label": "Số ngày nghỉ",
+          "text_source": "Lãnh đạo được hưởng chính sách nghỉ phép linh hoạt không giới hạn ngày (Executive Leave).",
+          "typed_value": {
+            "kind": "unlimited",
+            "value": null,
+            "unit": "not_applicable"
+          },
+          "render_template": "Lãnh đạo được hưởng chính sách nghỉ phép linh hoạt không giới hạn ngày (Executive Leave).",
+          "is_floor": false,
+          "comparison": "none",
+          "source_ref": {
+            "path": "data/documents.json",
+            "line": 197,
+            "json_pointer": "/7/clauses/entitlement"
+          },
+          "review_flags": [
+            "M03",
+            "M06"
+          ]
+        }
+      ]
+    }
+  ]
+}

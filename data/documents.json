@@ -1,0 +1,203 @@
+[
+  {
+    "doc_id": "POL-GRP-LV",
+    "version": "v3.0",
+    "title": "Chính sách nghỉ phép Tập đoàn Alpha",
+    "scope_level": "Group",
+    "scope_unit_id": "GRP",
+    "status": "Approved",
+    "effective_from": "2026-01-01",
+    "effective_to": null,
+    "applies_to": ["Official"],
+    "access_level": "Internal",
+    "allowed_roles": [],
+    "is_mandatory_floor": true,
+    "owner_id": "HR_Group",
+    "clauses": {
+      "entitlement": {
+        "text": "Nhân sự chính thức toàn Tập đoàn được hưởng tối thiểu 12 ngày phép năm có hưởng lương.",
+        "value": 12,
+        "is_floor": true
+      },
+      "notice_period": {
+        "text": "Thời gian thông báo nghỉ phép tối thiểu là 2 ngày làm việc.",
+        "value": 2
+      }
+    }
+  },
+  {
+    "doc_id": "POL-A-LV",
+    "version": "v1.0",
+    "title": "Quy chế nghỉ phép Công ty A (Cũ)",
+    "scope_level": "Company",
+    "scope_unit_id": "CTY_A",
+    "status": "Superseded",
+    "effective_from": "2024-01-01",
+    "effective_to": "2026-02-28",
+    "applies_to": ["Official"],
+    "access_level": "Internal",
+    "allowed_roles": [],
+    "is_mandatory_floor": false,
+    "owner_id": "HR_A",
+    "clauses": {
+      "entitlement": {
+        "text": "Nhân viên Công ty A được nghỉ 12 ngày phép/năm.",
+        "value": 12
+      },
+      "notice_period": {
+        "text": "Thông báo trước tối thiểu 3 ngày làm việc.",
+        "value": 3
+      }
+    }
+  },
+  {
+    "doc_id": "POL-A-LV",
+    "version": "v2.0",
+    "title": "Quy chế nghỉ phép Công ty A (Mới)",
+    "scope_level": "Company",
+    "scope_unit_id": "CTY_A",
+    "status": "Approved",
+    "effective_from": "2026-03-01",
+    "effective_to": null,
+    "applies_to": ["Official"],
+    "access_level": "Internal",
+    "allowed_roles": [],
+    "is_mandatory_floor": false,
+    "owner_id": "HR_A",
+    "clauses": {
+      "entitlement": {
+        "text": "Nhân viên chính thức Công ty A được hưởng 14 ngày phép/năm.",
+        "value": 14
+      },
+      "notice_period": {
+        "text": "Thông báo trước tối thiểu 3 ngày làm việc.",
+        "value": 3
+      },
+      "approver": {
+        "text": "Đơn nghỉ phép do Quản lý trực tiếp phê duyệt qua cổng HRM.",
+        "value": "LineManager"
+      }
+    }
+  },
+  {
+    "doc_id": "POL-B-LV",
+    "version": "v1.0",
+    "title": "Quy chế nghỉ phép Công ty B",
+    "scope_level": "Company",
+    "scope_unit_id": "CTY_B",
+    "status": "Approved",
+    "effective_from": "2025-01-01",
+    "effective_to": null,
+    "applies_to": ["Official"],
+    "access_level": "Internal",
+    "allowed_roles": [],
+    "is_mandatory_floor": false,
+    "owner_id": "HR_B",
+    "clauses": {
+      "entitlement": {
+        "text": "Nhân sự Công ty B được hưởng 12 ngày phép/năm.",
+        "value": 12
+      },
+      "notice_period": {
+        "text": "Phải báo trước tối thiểu 5 ngày làm việc.",
+        "value": 5
+      },
+      "approver": {
+        "text": "Trưởng phòng ban phê duyệt đơn nghỉ phép.",
+        "value": "DepartmentHead"
+      }
+    }
+  },
+  {
+    "doc_id": "GUD-B-ENG-LV",
+    "version": "v1.0",
+    "title": "Hướng dẫn nghỉ phép Phòng Kỹ thuật Công ty B",
+    "scope_level": "Department",
+    "scope_unit_id": "DEPT_ENG_B",
+    "status": "Approved",
+    "effective_from": "2025-06-01",
+    "effective_to": null,
+    "applies_to": ["Official"],
+    "access_level": "Internal",
+    "allowed_roles": [],
+    "is_mandatory_floor": false,
+    "owner_id": "Head_ENG_B",
+    "clauses": {
+      "notice_period": {
+        "text": "Nhân sự kỹ thuật phải báo trước tối thiểu 7 ngày làm việc để sắp xếp bàn giao sprint.",
+        "value": 7
+      },
+      "blackout_period": {
+        "text": "Không được nghỉ phép trong tuần Release hệ thống sản phẩm trọng điểm.",
+        "value": "ReleaseWeek"
+      }
+    }
+  },
+  {
+    "doc_id": "GUD-B-PAY-LV",
+    "version": "v1.0",
+    "title": "Quy định trực On-call và Nghỉ phép Nhóm Payments",
+    "scope_level": "Team",
+    "scope_unit_id": "TEAM_PAY_B",
+    "status": "Approved",
+    "effective_from": "2025-09-01",
+    "effective_to": null,
+    "applies_to": ["Official"],
+    "access_level": "Internal",
+    "allowed_roles": [],
+    "is_mandatory_floor": false,
+    "owner_id": "Lead_PAY_B",
+    "clauses": {
+      "notice_period": {
+        "text": "Thành viên nhóm trực Payments On-call phải đăng ký lịch nghỉ trước tối thiểu 10 ngày.",
+        "value": 10
+      },
+      "contingency": {
+        "text": "Nghỉ phép bắt buộc phải có người trực On-call thay thế được chỉ định và xác nhận trong nhóm.",
+        "value": "BackupRequired"
+      }
+    }
+  },
+  {
+    "doc_id": "DRF-A-HR-LV",
+    "version": "v0.9",
+    "title": "Dự thảo chính sách phúc lợi nghỉ phép 2027 Công ty A",
+    "scope_level": "Department",
+    "scope_unit_id": "DEPT_HR_A",
+    "status": "Draft",
+    "effective_from": "2027-01-01",
+    "effective_to": null,
+    "applies_to": ["Official"],
+    "access_level": "Internal",
+    "allowed_roles": ["HR_Admin"],
+    "is_mandatory_floor": false,
+    "owner_id": "HR_A",
+    "clauses": {
+      "entitlement": {
+        "text": "Đề xuất nâng số ngày nghỉ phép năm lên 16 ngày cho toàn thể nhân viên.",
+        "value": 16
+      }
+    }
+  },
+  {
+    "doc_id": "POL-A-LV-EXEC",
+    "version": "v1.0",
+    "title": "Quy chế nghỉ phép đặc biệt dành cho Cấp Lãnh đạo Công ty A",
+    "scope_level": "Company",
+    "scope_unit_id": "CTY_A",
+    "status": "Approved",
+    "effective_from": "2026-01-01",
+    "effective_to": null,
+    "applies_to": ["Official"],
+    "access_level": "Confidential",
+    "allowed_roles": ["Executive", "Board"],
+    "is_mandatory_floor": false,
+    "owner_id": "BOD_A",
+    "clauses": {
+      "entitlement": {
+        "text": "Lãnh đạo được hưởng chính sách nghỉ phép linh hoạt không giới hạn ngày (Executive Leave).",
+        "value": 99
+      }
+    }
+  }
+]

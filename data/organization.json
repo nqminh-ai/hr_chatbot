@@ -1,0 +1,52 @@
+{
+  "units": {
+    "GRP": {
+      "id": "GRP",
+      "name": "Tập đoàn Alpha",
+      "level": "Group",
+      "parent": null
+    },
+    "CTY_A": {
+      "id": "CTY_A",
+      "name": "Công ty A (Alpha Media)",
+      "level": "Company",
+      "parent": "GRP"
+    },
+    "CTY_B": {
+      "id": "CTY_B",
+      "name": "Công ty B (Alpha Pay)",
+      "level": "Company",
+      "parent": "GRP"
+    },
+    "DEPT_MKT_A": {
+      "id": "DEPT_MKT_A",
+      "name": "Phòng Marketing (Cty A)",
+      "level": "Department",
+      "parent": "CTY_A"
+    },
+    "DEPT_HR_A": {
+      "id": "DEPT_HR_A",
+      "name": "Phòng Nhân sự (Cty A)",
+      "level": "Department",
+      "parent": "CTY_A"
+    },
+    "DEPT_ENG_B": {
+      "id": "DEPT_ENG_B",
+      "name": "Phòng Kỹ thuật (Cty B)",
+      "level": "Department",
+      "parent": "CTY_B"
+    },
+    "DEPT_OPS_B": {
+      "id": "DEPT_OPS_B",
+      "name": "Phòng Vận hành (Cty B)",
+      "level": "Department",
+      "parent": "CTY_B"
+    },
+    "TEAM_PAY_B": {
+      "id": "TEAM_PAY_B",
+      "name": "Nhóm Payments On-call (PB Kỹ thuật, Cty B)",
+      "level": "Team",
+      "parent": "DEPT_ENG_B"
+    }
+  }
+}

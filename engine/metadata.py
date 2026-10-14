@@ -2,6 +2,7 @@
 import json
 import math
 from datetime import date
+from functools import lru_cache
 from pathlib import Path, PurePosixPath
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -143,7 +144,10 @@ def compile_document(raw):
     )
 
 
+@lru_cache(maxsize=2)
 def snapshot_from_bytes(data_bytes, schema_bytes):
+    # Immutable snapshots can be reused only when BOTH byte sequences match.
+    # SQLite is still read on every refresh, so direct SQL edits invalidate this.
     try:
         raw, schema = json.loads(data_bytes), json.loads(schema_bytes)
         Draft202012Validator.check_schema(schema)

@@ -18,6 +18,8 @@ export interface Citation {
   text_source?: string;
   valid_from?: string;
   scope_level?: string;
+  source_ref?: { path: string; line: number; json_pointer: string };
+  clause_id?: string;
 }
 
 export interface GraphNode {
@@ -58,4 +60,5 @@ export interface Conversation {
   date: string;
   messages: ChatMessage[];
   updatedAt: string;
+  context?: { date: string; policyId: string | null; version: string | null; keys: string[]; snapshotId: string };
 }

@@ -1,0 +1,14 @@
+{
+  "topics": ["nghi phep", "ngay phep", "phep nam", "annual leave", "don nghi", "phep nghi thuong nien"],
+  "slots": {
+    "notice_period": ["bao truoc", "thong bao", "dang ky lich"],
+    "approver": ["duyet", "phe duyet"],
+    "blackout_period": ["release", "cam nghi", "khong duoc nghi"],
+    "contingency": ["truc", "thay the", "nguoi thay", "backup"],
+    "entitlement": ["bao nhieu", "may ngay", "so ngay", "che do", "thuong nien"]
+  },
+  "unsupported": ["ung truoc", "bao luu", "chuyen ngay phep", "cong don", "carryover", "carry over", "ban ngay phep", "mua ngay phep", "nghi om", "thai san", "tham nien", "con lai", "da nghi", "so du"],
+  "out_of_scope": ["thoi tiet", "chung khoan", "gia vang", "viet code", "lap trinh"],
+  "summary": ["tom tat", "ngan gon", "noi lai", "giai thich", "vi sao", "tai sao", "dieu do", "the thi"],
+  "current_date": ["hom nay", "hien tai", "bay gio"]
+}

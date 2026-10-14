@@ -127,10 +127,11 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(result["status"], "answered")
         self.assertEqual([c["key"] for c in result["claims"]], ["approver"])
 
-    def test_future_approved_not_draft(self):
+    def test_year_only_future_requires_explicit_day(self):
         result = self.answer(query="Quy định nghỉ phép năm sau 2027?")
-        self.assertEqual(result["query_date"], "2027-01-01")
-        self.assertEqual(self.entitlement(result)["value"], 14)
+        self.assertEqual(result["query_date"], DAY)
+        self.assertEqual(result["status"], "needs_clarification")
+        self.assertFalse(result["claims"])
         self.assertNotIn("DRF-A-HR", json.dumps(result))
 
     def test_clock_is_injectable(self):

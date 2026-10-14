@@ -80,7 +80,7 @@ class KnowledgeAssistant:
                 "trace_id": trace["trace_id"], "trace": trace,
                 "graph": graph or {"snapshot_id": self.snapshot.snapshot_id, "nodes": [], "edges": []}}
 
-    def answer_query(self, user_id, query, query_date=None):
+    def answer_query(self, user_id, query, query_date=None, history=None):
         day = self.clock.today()
         try:
             self.refresh()
@@ -91,11 +91,11 @@ class KnowledgeAssistant:
         if self.managed:
             # Each request retains one immutable snapshot even if another thread reloads.
             request = KnowledgeAssistant(snapshot=self.snapshot, clock=self.clock)
-            return request.answer_query(user_id, query, day)
+            return request.answer_query(user_id, query, day, history=history)
         profile = self.identity_service.get_user_profile(user_id)
         if profile is None:
             return self._result("refused", day)
-        intent = SemanticMatcher.analyze_intent(query, day, self.snapshot.scope_patterns)
+        intent = SemanticMatcher.with_history(query, day, self.clock.today(), self.snapshot.scope_patterns, history or [])
         day = intent.requested_date or day
         if intent.status != "route":
             return self._result(intent.status, day, profile)

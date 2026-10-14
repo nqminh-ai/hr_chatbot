@@ -4,6 +4,7 @@ import copy
 import json
 import platform
 import statistics
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -11,6 +12,8 @@ from time import perf_counter
 from engine.core import KnowledgeAssistant
 from engine.metadata import snapshot_from_bytes
 from engine.snapshot import DEFAULT_DATA, DEFAULT_SCHEMA
+from engine.storage import canonical_bytes, initialize_database, runtime_data_bytes
+from engine.tabular import from_tables, to_tables
 
 
 def scaled_fixture(raw, extra_documents):
@@ -19,7 +22,7 @@ def scaled_fixture(raw, extra_documents):
     root = next(u["id"] for u in raw["organization"] if u["parent"] is None)
     for index in range(extra_documents):
         unit_id = f"SCALE_{index}"
-        raw["organization"].append({"id": unit_id, "name": unit_id, "level": "Company", "parent": root})
+        raw["organization"].append({"id": unit_id, "name": unit_id, "level": "Company", "parent": root, "query_aliases": []})
         doc = copy.deepcopy(template)
         doc["policy_id"] = f"POL-SCALE-{index}"
         doc["doc_uid"] = doc["policy_id"] + "@v2.0"
@@ -32,6 +35,7 @@ def scaled_fixture(raw, extra_documents):
 
 
 def measure(raw, samples):
+    snapshot_from_bytes.cache_clear()
     before = perf_counter()
     snapshot = snapshot_from_bytes(json.dumps(raw).encode(), DEFAULT_SCHEMA.read_bytes())
     build_ms = (perf_counter() - before) * 1000
@@ -51,6 +55,29 @@ def measure(raw, samples):
             "max_ms": max(ordered), "snapshot_id": snapshot.snapshot_id}
 
 
+def measure_storage(raw, scaled, samples):
+    def timing(action):
+        durations = []
+        for _ in range(min(samples, 20)):
+            start = perf_counter(); action(); durations.append((perf_counter() - start) * 1000)
+        return {"p50_ms": statistics.median(durations), "max_ms": max(durations), "samples": len(durations)}
+    tables = to_tables(scaled)
+    reconstruction = timing(lambda: from_tables(tables))
+    with tempfile.TemporaryDirectory(prefix="appota-benchmark-") as folder:
+        db = Path(folder) / "benchmark.db"
+        initialize_database(db, raw)
+        data = runtime_data_bytes(db)
+        schema = DEFAULT_SCHEMA.read_bytes()
+        # Same business validator with caching disabled: local comparison baseline.
+        uncached = timing(lambda: snapshot_from_bytes.__wrapped__(runtime_data_bytes(db), schema))
+        snapshot_from_bytes(data, schema)
+        cached = timing(lambda: snapshot_from_bytes(runtime_data_bytes(db), schema))
+        if canonical_bytes(from_tables(tables)) != canonical_bytes(scaled):
+            raise RuntimeError("Tabular reconstruction changed the dataset")
+    return {"measurement": "consistent SQLite read + one validation; uncached baseline excludes previous duplicate caller validation",
+            "reconstruction": reconstruction, "uncached_read": uncached, "cached_read": cached}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--samples", type=int, default=100)
@@ -60,10 +87,11 @@ def main():
     if args.samples < 1 or not 0 <= args.extra_documents <= 10000:
         parser.error("Positive samples and 0..10000 extra documents required")
     raw = json.loads(DEFAULT_DATA.read_bytes())
+    scaled = scaled_fixture(raw, args.extra_documents)
     report = {"measured_at": datetime.now(timezone.utc).isoformat(), "python": platform.python_version(),
               "platform": platform.platform(), "measurement": "warm immutable snapshot; includes routing/filter/resolve/render/graph, excludes reload I/O",
               "fixture": measure(raw, args.samples),
-              "scaled": measure(scaled_fixture(raw, args.extra_documents), args.samples)}
+              "scaled": measure(scaled, args.samples), "storage": measure_storage(raw, scaled, args.samples)}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))

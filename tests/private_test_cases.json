@@ -347,26 +347,17 @@
   },
   {
     "id": "PT17",
-    "name": "Năm sau dùng Approved, không dùng Draft",
+    "name": "N?m sau c?n ng?y c? th?, kh?ng t? l?y 01/01",
     "category": "Time",
     "persona": "lan",
     "date": "2026-10-13",
     "query": "Năm sau 2027 nghỉ phép bao nhiêu ngày?",
     "expected": {
-      "status": "answered",
-      "graph_closed": true,
-      "should_not_mention": [
-        "POL-A-LV-EXEC",
-        "POL-B-LV",
-        "GUD-B-",
-        "DRF-A-HR-LV"
-      ],
-      "days": 14,
-      "query_date": "2027-01-01",
-      "claim_keys": [
-        "entitlement"
-      ],
-      "primary_doc": "POL-A-LV v2.0"
+      "status": "needs_clarification",
+      "query_date": "2026-10-13",
+      "claim_keys": [],
+      "no_leakage": true,
+      "empty_graph": true
     }
   },
   {

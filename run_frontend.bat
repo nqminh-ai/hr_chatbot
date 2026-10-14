@@ -13,16 +13,14 @@ if errorlevel 1 (
     echo [LOI] Khong tim thay Node.js tren may tinh!
     echo Vui long cai dat Node.js tu https://nodejs.org de tiep tuc.
     echo.
-    pause
     exit /b 1
 )
 
 if not exist "node_modules" (
     echo Dang cai dat cac goi thu vien can thiet...
-    call npm install
+    call npm ci
     if errorlevel 1 (
         echo [LOI] Khong the cai dat cac goi npm.
-        pause
         exit /b 1
     )
 )
@@ -38,7 +36,6 @@ call npm run dev
 if errorlevel 1 (
     echo.
     echo [LOI] Khong the khoi dong may chu Next.js.
-    pause
     exit /b 1
 )
 

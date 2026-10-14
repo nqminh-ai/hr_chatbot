@@ -4,7 +4,7 @@ Giao diện chat chính của project, dùng Next.js, React và TypeScript. API 
 
 ## Chạy local
 
-Cần Node.js từ **20.9.0** trở lên. Từ thư mục gốc:
+Cần Node.js **20.19+ hoặc 22.12+**; môi trường đã kiểm tra là Node 24. Từ thư mục gốc:
 
 ```powershell
 cd frontend
@@ -43,7 +43,9 @@ Gemini chỉ được gọi khi đã bật, có key, truy vấn có điều kho�
 
 Server gửi câu hỏi hiện tại, tối đa 6 câu hỏi trước đó và các điều khoản đã lọc theo bối cảnh, hiệu lực và sàn chính sách. Nội dung assistant do client gửi và toàn bộ kho chính sách không được chuyển sang model. Adapter hiện chỉ cho phép dataset có `artifact_kind=mock_runtime`.
 
-Khi model, key hoặc dịch vụ có lỗi, API trả kết quả rule engine cùng thông báo fallback. Trích dẫn do server xác định từ dữ liệu. `provider=gemini` trong metadata chỉ cho biết adapter đã bật; provider trên từng câu trả lời mới cho biết lượt đó có dùng Gemini hay không.
+Model trả JSON theo schema với `status`, `fact_ids` và `style`. Server yêu cầu đúng trạng thái và đủ mọi fact ID đã lọc; output thừa, thiếu, trùng hoặc khác nguồn bị từ chối. Server render câu trả lời từ facts đã xác thực, bao gồm giá trị, đơn vị, ngày và trích dẫn. Model không trực tiếp viết nội dung trả lời.
+
+Khi model, key hoặc dịch vụ có lỗi, API trả kết quả rule engine cùng thông báo fallback. Log server chỉ chứa mã lỗi và `requestId`, không ghi câu hỏi, nội dung HR hay key. `provider=gemini` trong metadata GET cho biết adapter đã bật; provider trên từng câu trả lời cho biết lượt đó có dùng Gemini hay không. `generation.render_mode=verified_facts` áp dụng cho câu trả lời chính sách.
 
 Chọn model theo [danh sách model Gemini](https://ai.google.dev/gemini-api/docs/models). Khi bật Gemini, câu hỏi và ngữ cảnh được gửi sang Google; dùng dữ liệu mẫu cho demo hiện tại.
 
@@ -52,13 +54,13 @@ Chọn model theo [danh sách model Gemini](https://ai.google.dev/gemini-api/doc
 Supabase hiện phục vụ **kiểm tra kết nối**, chưa thay nguồn chính sách JSON hoặc `localStorage` lưu hội thoại.
 
 1. Chuẩn bị project Supabase dành cho dữ liệu mẫu.
-2. Nạp [schema.sql](../supabase/schema.sql), rồi [seed.sql](../supabase/seed.sql) qua SQL Editor.
+2. Project mới: nạp [schema.sql](../supabase/schema.sql), rồi [seed.sql](../supabase/seed.sql) qua SQL Editor. Database đã có dữ liệu: dùng migration trong [quy trình Supabase](../supabase/README.md).
 3. Điền `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_ANON_KEY` vào `.env.local` hoặc biến môi trường Vercel.
 4. Khởi động lại server hoặc tạo deployment mới; kiểm tra `GET /api/chat` và trạng thái ở sidebar.
 
-**`schema.sql` có lệnh DROP TABLE/VIEW:** chạy lại sẽ xóa các bảng cùng tên và dữ liệu đang có. Dùng trên project demo mới hoặc sau khi đã backup. Policy hiện cho phép đọc công khai các bảng chính sách/persona và toàn quyền trên các bảng chat; cần thiết kế lại phân quyền trước khi dùng dữ liệu thật.
+Schema mới không tự reset bảng. Corpus, persona và chat đều bật RLS, thu hồi grants của `PUBLIC`, `anon`, `authenticated`; view dùng quyền người gọi. RPC `knowledge_health()` chỉ cho biết dataset có sẵn. Migration giữ dữ liệu và quyền service role; việc áp dụng lên Supabase thật là bước triển khai riêng.
 
-`checkSupabaseConnection()` truy vấn tối đa 10 `user_id` trong bảng `personas`. Nhãn **Supabase Live** xác nhận truy vấn này thành công; số personas hiển thị là số dòng trả về trong giới hạn đó, không phải tổng số nhân sự. Nhãn này không có nghĩa câu trả lời đã chuyển sang đọc Supabase.
+`checkSupabaseConnection()` gọi health RPC với timeout 5 giây và trả mã lỗi trung tính. Sidebar hiển thị **Nguồn trả lời: JSON mẫu** cùng trạng thái kết nối Supabase riêng; không dùng số dòng personas để suy ra nguồn trả lời.
 
 Schema có sẵn `chat_conversations` và `chat_messages`, nhưng ứng dụng chưa ghi vào hai bảng này. `scripts/export_sqlite_to_supabase.py` ở root chỉ tạo lại file seed từ SQLite local, không tự chạy SQL trên Supabase.
 
@@ -83,8 +85,8 @@ Trong **Project Settings → Environment Variables**, thêm biến Gemini/Supaba
 
 | Endpoint | Vai trò |
 | --- | --- |
-| `GET /api/chat` | Trả ngày mặc định, trạng thái bật Gemini, cờ dữ liệu mẫu và kết quả kiểm tra kết nối Supabase. |
-| `POST /api/chat` | Nhận câu hỏi/bối cảnh/lịch sử và trả câu trả lời, trạng thái, nguồn, graph, trace, provider và thông báo fallback nếu có. |
+| `GET /api/chat` | Trả ngày mặc định, trạng thái bật Gemini, personas từ snapshot đã validate, snapshot ID, nguồn JSON và kết nối Supabase. |
+| `POST /api/chat` | Đọc body theo stream, giới hạn 100.000 bytes; trả câu trả lời, trạng thái, nguồn, graph, trace, context, request ID và thông báo fallback nếu có. |
 
 Ví dụ request POST:
 
@@ -97,25 +99,27 @@ Ví dụ request POST:
 }
 ```
 
-Lịch sử lưu ở `localStorage` với key `appota-conversations-v1`, không đồng bộ giữa trình duyệt hay thiết bị. Đổi persona hoặc ngày áp dụng mở cuộc trò chuyện mới. Persona selector là bối cảnh mẫu, chưa phải đăng nhập.
+Client gửi lại `context` của response trước để giữ ngày, policy/version và loại điều khoản khi hỏi tiếp. Đề cập “hiện tại” chuyển về ngày hiện tại; câu hỏi chỉ có năm yêu cầu ngày cụ thể.
+
+Lịch sử lưu ở `localStorage` với key `appota-conversations-v2`, envelope `{version: 2, conversations: [...]}`. Có thể đọc v1 cũ sau khi kiểm tra metadata. Hội thoại hỏng bị loại bỏ; graph phải có endpoint hợp lệ, ngày phải tồn tại, dữ liệu có giới hạn kích thước. Không đồng bộ giữa trình duyệt hay thiết bị. Đổi persona hoặc ngày áp dụng mở cuộc trò chuyện mới. Persona selector là bối cảnh mẫu, chưa phải đăng nhập.
 
 ## Kiểm tra và xử lý lỗi
 
 Chạy trong `frontend/`:
 
 ```powershell
-npm.cmd run test:chat
+npm.cmd test
 npm.cmd run lint
 npm.cmd run build
 ```
 
-Test chat mock lời gọi Gemini; kết quả pass không xác nhận key, model hoặc kết nối Supabase thật.
+`npm test` chạy test dữ liệu, contract, Gemini mock, API, React UI và PostgreSQL nhúng. Test SQL cần Python `.venv` đã cài ở root (hoặc `APPOTA_PYTHON`). Không gọi Gemini/Supabase thật. Smoke test live riêng: `npm.cmd run test:gemini:live`; nó gửi một câu hỏi mẫu, không gửi lịch sử hay dữ liệu nhân sự thật. Kết quả triển khai hiện tại nằm trong [implementation_progress.md](../docs/implementation_progress.md).
 
 | Hiện tượng | Kiểm tra |
 | --- | --- |
 | Đã lưu key nhưng chưa có câu trả lời Gemini | `GEMINI_ENABLED=true`, key phía server, khởi động lại server; truy vấn phải có điều khoản và không bị từ chối/conflict. |
 | Thông báo Gemini fallback | Model ID, quyền của API key, quota và khả năng gọi dịch vụ Google. |
-| Sidebar báo lỗi Supabase | URL project, anon key, bảng `personas` đã nạp và policy SELECT. Chat JSON vẫn hoạt động nếu kiểm tra Supabase thất bại. |
+| Sidebar chưa kết nối Supabase | URL project, anon key, RPC `knowledge_health()` và migration đã áp dụng. Chat JSON vẫn hoạt động nếu kiểm tra Supabase thất bại. |
 | Vercel không tìm được `knowledge.json` | Root Directory là `frontend`, bật đọc file ngoài root và giữ thư mục `data/` trong repo. |
 | Đổi biến Vercel nhưng ứng dụng chưa cập nhật | Tạo deployment mới cho đúng môi trường Production/Preview. |
 | PowerShell chặn `npm.ps1` | Dùng `npm.cmd` như các lệnh trong README. |

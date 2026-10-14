@@ -7,10 +7,19 @@
     "build": "next build",
     "start": "next start",
     "test:chat": "node scripts/check-chat.cjs",
-    "lint": "eslint"
+    "test:contracts": "node scripts/check-contracts.cjs",
+    "test:data": "node scripts/check-data.cjs",
+    "test:gemini": "node scripts/check-gemini.cjs",
+    "test:gemini:live": "node scripts/check-gemini-live.cjs",
+    "lint": "eslint",
+    "test:ui": "vitest run",
+    "test:supabase": "node scripts/check-supabase.cjs",
+    "test": "node scripts/check-all.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "lucide-react": "^1.57.0",
     "next": "16.4.0",
     "react": "19.3.0",
@@ -18,13 +27,20 @@
     "react-markdown": "^10.1.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
     "@tailwindcss/turbopack": "^4",
+    "@testing-library/react": "16.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
+    "jsdom": "30.1.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "4.1.11"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }

@@ -3,22 +3,9 @@
 -- Migration from SQLite to PostgreSQL with JSONB and RLS Support
 -- ==============================================================================
 
--- Enable UUID extension if needed
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Clean up existing tables if re-running
-DROP VIEW IF EXISTS policy_inventory;
-DROP TABLE IF EXISTS supersedes CASCADE;
-DROP TABLE IF EXISTS lifecycle_events CASCADE;
-DROP TABLE IF EXISTS clauses CASCADE;
-DROP TABLE IF EXISTS documents CASCADE;
-DROP TABLE IF EXISTS personas CASCADE;
-DROP TABLE IF EXISTS organization CASCADE;
-DROP TABLE IF EXISTS migration_decisions CASCADE;
-DROP TABLE IF EXISTS source_hashes CASCADE;
-DROP TABLE IF EXISTS dataset_info CASCADE;
-DROP TABLE IF EXISTS chat_messages CASCADE;
-DROP TABLE IF EXISTS chat_conversations CASCADE;
+-- Fresh database only (PostgreSQL 15+). Existing databases use migrations/.
+-- No implicit reset: existing tables cause CREATE to fail without deleting data.
+BEGIN;
 
 -- 1. Dataset Info
 CREATE TABLE dataset_info (
@@ -26,7 +13,7 @@ CREATE TABLE dataset_info (
     schema_version TEXT NOT NULL CHECK (schema_version = '2.0'),
     artifact_kind TEXT NOT NULL CHECK (artifact_kind = 'mock_runtime'),
     activation_allowed BOOLEAN NOT NULL DEFAULT TRUE,
-    created_on TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_on DATE NOT NULL DEFAULT CURRENT_DATE,
     timezone TEXT NOT NULL CHECK (timezone = 'Asia/Ho_Chi_Minh'),
     sample_id TEXT NOT NULL CHECK (length(sample_id) > 0)
 );
@@ -198,24 +185,46 @@ JOIN organization o ON o.id = d.scope_id
 LEFT JOIN clauses c ON c.doc_uid = d.doc_uid
 GROUP BY d.doc_uid, d.title, o.name, d.lifecycle_state, d.classification, d.valid_from, d.valid_to, d.owner_id, d.review_state;
 
--- ==============================================================================
--- Row-Level Security (RLS) Configuration
--- ==============================================================================
-ALTER TABLE dataset_info ENABLE ROW LEVEL SECURITY;
-ALTER TABLE organization ENABLE ROW LEVEL SECURITY;
-ALTER TABLE personas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE clauses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE chat_conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+-- Closed public access; same configuration as the existing-database migration.
+-- Non-destructive: keeps corpus, chat rows and service_role access intact.
+-- Apply as the database owner after reviewing grants/policies and taking a backup.
 
--- Allow public read for general knowledge bases in demo/internal use
-CREATE POLICY "Public read for organization" ON organization FOR SELECT USING (true);
-CREATE POLICY "Public read for personas" ON personas FOR SELECT USING (true);
-CREATE POLICY "Public read for documents" ON documents FOR SELECT USING (true);
-CREATE POLICY "Public read for clauses" ON clauses FOR SELECT USING (true);
-CREATE POLICY "Public read for dataset_info" ON dataset_info FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read for organization" ON public.organization;
+DROP POLICY IF EXISTS "Public read for personas" ON public.personas;
+DROP POLICY IF EXISTS "Public read for documents" ON public.documents;
+DROP POLICY IF EXISTS "Public read for clauses" ON public.clauses;
+DROP POLICY IF EXISTS "Public read for dataset_info" ON public.dataset_info;
+DROP POLICY IF EXISTS "Public full access to conversations" ON public.chat_conversations;
+DROP POLICY IF EXISTS "Public full access to messages" ON public.chat_messages;
 
--- Allow full access for chat conversations and messages
-CREATE POLICY "Public full access to conversations" ON chat_conversations FOR ALL USING (true);
-CREATE POLICY "Public full access to messages" ON chat_messages FOR ALL USING (true);
+DO $security$
+DECLARE relation_name text; column_name text;
+BEGIN
+  FOREACH relation_name IN ARRAY ARRAY[
+    'dataset_info', 'source_hashes', 'migration_decisions', 'organization',
+    'personas', 'documents', 'clauses', 'lifecycle_events', 'supersedes',
+    'chat_conversations', 'chat_messages'
+  ] LOOP
+    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', relation_name);
+    EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC, anon, authenticated', relation_name);
+    FOR column_name IN SELECT a.attname FROM pg_catalog.pg_attribute a
+      WHERE a.attrelid = format('public.%I', relation_name)::regclass
+        AND a.attnum > 0 AND NOT a.attisdropped
+    LOOP
+      EXECUTE format('REVOKE SELECT (%I), INSERT (%I), UPDATE (%I), REFERENCES (%I) ON public.%I FROM PUBLIC, anon, authenticated',
+        column_name, column_name, column_name, column_name, relation_name);
+    END LOOP;
+  END LOOP;
+END $security$;
+
+ALTER VIEW public.policy_inventory SET (security_invoker = true);
+REVOKE ALL ON TABLE public.policy_inventory FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.knowledge_health()
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog
+AS $health$ SELECT EXISTS (SELECT 1 FROM public.dataset_info WHERE singleton = 1) $health$;
+REVOKE ALL ON FUNCTION public.knowledge_health() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.knowledge_health() TO anon, authenticated;
+
+COMMIT;

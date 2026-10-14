@@ -98,7 +98,7 @@ def clause_from_row(row):
 
 def document_from_row(row, tables):
     uid = row["doc_uid"]
-    events = ordered([e for e in tables["lifecycle_events"] if e["doc_uid"] == uid])
+    events = ordered(tables["lifecycle_events"])
     doc = {key: row[key] for key in ("doc_uid", "policy_id", "version", "title", "topic")}
     doc.update(scope={"unit_id": row["scope_id"], "level": row["scope_level"]},
                lifecycle={"state": row["lifecycle_state"], "valid_from": row["valid_from"],
@@ -108,8 +108,8 @@ def document_from_row(row, tables):
                        **{key: json.loads(row[key + "_json"]) for key in ("allowed_roles", "applies_to", "audience_roles")}},
                governance={key: row[key] for key in ("owner_id", "review_due", "review_state")},
                provenance={"sha256": row["source_sha256"], **{key: row[key] for key in ("source_path", "line_start", "line_end", "source_type")}},
-               supersedes=[e["previous_uid"] for e in ordered([e for e in tables["supersedes"] if e["doc_uid"] == uid])],
-               clauses=[clause_from_row(c) for c in ordered([c for c in tables["clauses"] if c["doc_uid"] == uid])])
+               supersedes=[e["previous_uid"] for e in ordered(tables["supersedes"])],
+               clauses=[clause_from_row(c) for c in ordered(tables["clauses"])])
     return doc
 
 
@@ -123,7 +123,13 @@ def from_tables(tables):
         raw[table] = [{key: value for key, value in row.items() if key != "position"} for row in ordered(tables[table])]
     for unit in raw["organization"]:
         unit["query_aliases"] = json.loads(unit.pop("query_aliases_json"))
-    raw["documents"] = [document_from_row(row, tables) for row in ordered(tables["documents"])]
+    # Group children once, rather than rescanning every child table per document.
+    grouped = {name: {} for name in ("lifecycle_events", "supersedes", "clauses")}
+    for name, index in grouped.items():
+        for row in tables[name]:
+            index.setdefault(row["doc_uid"], []).append(row)
+    raw["documents"] = [document_from_row(row, {name: index.get(row["doc_uid"], []) for name, index in grouped.items()})
+                        for row in ordered(tables["documents"])]
     return raw
 
 

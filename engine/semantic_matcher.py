@@ -1,18 +1,16 @@
 """Bounded lexical routing for leave policy, not a general language model."""
 import re
+import json
 import unicodedata
 from datetime import date
+from dataclasses import replace
+from pathlib import Path
 
 from engine.models import Intent
 
-SLOTS = {
-    "notice_period": ("bao truoc", "thong bao", "dang ky lich"),
-    "approver": ("duyet", "phe duyet"),
-    "blackout_period": ("release", "cam nghi"),
-    "contingency": ("truc", "thay the", "nguoi thay"),
-}
-UNSUPPORTED = ("bao luu", "chuyen ngay phep", "cong don", "carryover", "carry over",
-               "ban ngay phep", "mua ngay phep", "nghi om", "thai san", "tham nien")
+RULES = json.loads((Path(__file__).resolve().parent.parent / "data/intent_rules.json").read_text(encoding="utf-8"))
+SLOTS = RULES["slots"]
+UNSUPPORTED = RULES["unsupported"]
 
 
 def normalize(text):
@@ -35,7 +33,9 @@ def temporal_date(text, base):
     if len(years) > 1 or (years and relative and int(next(iter(years))) != relative):
         raise ValueError("Ambiguous year")
     year = int(next(iter(years))) if years else relative
-    return date(year, 1, 1) if year else None
+    if year:
+        raise ValueError("Year-only question needs an explicit date")
+    return None
 
 
 def compile_scope_patterns(units):
@@ -62,19 +62,28 @@ class SemanticMatcher:
         text = normalize(query)
         if not text:
             return Intent(status="needs_clarification")
-        topic = contains(text, ("nghi phep", "ngay phep", "phep nam", "annual leave", "don nghi"))
+        topic = contains(text, RULES["topics"])
         topic = topic or bool(re.search(r"\bnghi (?:bao nhieu|may) ngay\b", text))
+        topic = topic or any(contains(text, phrases) for key, phrases in SLOTS.items() if key != "entitlement")
+        topic = topic or bool(re.search(r"\b(?:pol|gud|drf)-[a-z0-9-]+\b", text))
+        topic = topic or contains(text, UNSUPPORTED)
+        if contains(text, RULES["out_of_scope"]):
+            return Intent(status="out_of_scope")
         if not topic:
             return Intent(status="out_of_scope")
         if contains(text, UNSUPPORTED):
             return Intent(status="insufficient_evidence")
         if contains(text, ("luong cua toi", "muc luong")):
             return Intent(status="needs_clarification")
+        if contains(text, ("du thao", "draft")):
+            return Intent(draft=True)
         try:
             requested_date = temporal_date(text, base_date)
         except ValueError:
             return Intent(status="needs_clarification")
         keys = tuple(key for key, phrases in SLOTS.items() if contains(text, phrases))
+        if "notice_period" in keys:
+            keys = tuple(key for key in keys if key != "entitlement")
         if not keys and contains(text, ("bao nhieu", "may ngay", "so ngay", "che do")):
             keys = ("entitlement",)
         policy = re.search(r"\b(?:POL|GUD|DRF)-[A-Z0-9-]+\b", query, re.I)
@@ -93,3 +102,36 @@ class SemanticMatcher:
             target_scopes=requested_scopes(text, scope_patterns),
             requested_date=requested_date,
         )
+
+    @classmethod
+    def with_history(cls, query, day, today, patterns, history=()):
+        target = version = None
+        keys = ()
+        for turn in (history or [])[-20:]:
+            if not isinstance(turn, dict) or turn.get("sender") != "user" or not isinstance(turn.get("content"), str):
+                continue
+            prior = cls.analyze_intent(turn["content"], day, patterns)
+            text = normalize(turn["content"])
+            if contains(text, RULES["current_date"]):
+                day = today
+            elif prior.requested_date:
+                day = prior.requested_date
+            if prior.target_policy:
+                target, version = prior.target_policy, prior.target_version
+            if prior.keys:
+                keys = prior.keys
+            elif prior.status == "route" and contains(text, RULES["topics"]):
+                keys = tuple(SLOTS)
+        intent = cls.analyze_intent(query, day, patterns)
+        if not isinstance(query, str):
+            return intent
+        text = normalize(query)
+        if contains(text, RULES["current_date"]):
+            intent = replace(intent, requested_date=today)
+        inherited_keys = keys if contains(text, RULES["summary"]) else ()
+        if intent.status == "out_of_scope" and inherited_keys:
+            intent = replace(intent, status="route", keys=inherited_keys)
+        return replace(intent, requested_date=intent.requested_date or day,
+                       target_policy=intent.target_policy or target,
+                       target_version=intent.target_version or (version if not intent.target_policy else None),
+                       keys=intent.keys or inherited_keys)

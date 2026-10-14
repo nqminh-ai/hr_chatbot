@@ -112,6 +112,7 @@ class WebAPITests(unittest.TestCase):
             (bundle / "data").mkdir()
             (bundle / "schemas").mkdir()
             shutil.copy2(ROOT / "data/knowledge.json", bundle / "data/knowledge.json")
+            shutil.copy2(ROOT / "data/intent_rules.json", bundle / "data/intent_rules.json")
             shutil.copy2(ROOT / "schemas/knowledge_runtime_v2.schema.json", bundle / "schemas/knowledge_runtime_v2.schema.json")
             code = ("import sys; from api.index import bootstrap, answer; "
                     "assert bootstrap()['personas']; "

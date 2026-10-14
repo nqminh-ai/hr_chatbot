@@ -1,17 +1,18 @@
 'use client';
 
 import { MessageSquare, Plus, Settings2, X } from 'lucide-react';
-import { PERSONAS } from '@/lib/mockData';
-import type { Conversation } from '@/types';
+import type { Conversation, Persona } from '@/types';
+import type { SupabaseStatus } from '@/lib/supabase';
 
 interface Props {
   conversations: Conversation[]; active: Conversation | undefined; mobileOpen: boolean;
   onSelect: (id: string) => void; onNew: () => void; onClose: () => void;
   onContext: (persona: string, date: string) => void;
-  supabaseStatus?: { connected: boolean; tableCount?: number; error?: string } | null;
+  supabaseStatus?: SupabaseStatus | null;
+  personas: Persona[];
 }
 
-export function ConversationSidebar({ conversations, active, mobileOpen, onSelect, onNew, onClose, onContext, supabaseStatus }: Props) {
+export function ConversationSidebar({ conversations, active, mobileOpen, onSelect, onNew, onClose, onContext, supabaseStatus, personas }: Props) {
   return <>
     {mobileOpen && <button className="fixed inset-0 z-30 bg-black/60 md:hidden" onClick={onClose} aria-label="Đóng danh sách hội thoại" />}
     <aside className={`${mobileOpen ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-40 w-72 flex-col border-r border-neutral-800 bg-neutral-900 md:static md:flex md:w-64 shrink-0`}>
@@ -24,21 +25,17 @@ export function ConversationSidebar({ conversations, active, mobileOpen, onSelec
       </nav>
       <details className="mx-3 mb-3 rounded-xl border border-neutral-800 p-3">
         <summary className="flex cursor-pointer items-center gap-2 text-xs text-neutral-400"><Settings2 size={15} />Thiết lập tra cứu</summary>
-        {active && <div className="mt-4 space-y-3 text-xs"><label className="block">Bối cảnh nhân sự mẫu<select aria-label="Bối cảnh nhân sự mẫu" value={active.personaId} onChange={event => onContext(event.target.value, active.date)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 p-2">{Object.values(PERSONAS).map(profile => <option key={profile.userId} value={profile.userId}>{profile.name} · {profile.role}</option>)}</select></label><label className="block">Ngày áp dụng<input aria-label="Ngày áp dụng" type="date" value={active.date} onChange={event => { if (event.target.value) onContext(active.personaId, event.target.value); }} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 p-2" /></label><p className="text-[11px] leading-5 text-neutral-500">Đổi bối cảnh sẽ bắt đầu hội thoại mới để giữ đúng chính sách.</p></div>}
+        {active && <div className="mt-4 space-y-3 text-xs"><label className="block">Bối cảnh nhân sự mẫu<select aria-label="Bối cảnh nhân sự mẫu" value={active.personaId} onChange={event => onContext(event.target.value, active.date)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 p-2">{personas.map(profile => <option key={profile.userId} value={profile.userId}>{profile.name} · {profile.role}</option>)}</select></label><label className="block">Ngày áp dụng<input aria-label="Ngày áp dụng" type="date" value={active.date} onChange={event => { if (event.target.value) onContext(active.personaId, event.target.value); }} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 p-2" /></label><p className="text-[11px] leading-5 text-neutral-500">Đổi bối cảnh sẽ bắt đầu hội thoại mới để giữ đúng chính sách.</p></div>}
       </details>
-      <div className="border-t border-neutral-800 px-4 py-2.5 text-[11px] flex items-center justify-between">
-        <span className="text-neutral-500">Nguồn dữ liệu:</span>
-        {supabaseStatus?.connected ? (
-          <span className="text-emerald-400 flex items-center gap-1 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Supabase Live ({supabaseStatus.tableCount} personas)
+      <div className="space-y-1 border-t border-neutral-800 px-4 py-3 text-[11px]">
+        <p className="flex justify-between gap-2"><span className="text-neutral-500">Nguồn trả lời:</span><span>JSON mẫu</span></p>
+        <p className="flex justify-between gap-2"><span className="text-neutral-500">Kết nối Supabase:</span>
+          <span className={supabaseStatus?.connected ? 'text-emerald-400' : 'text-neutral-400'}>
+            {supabaseStatus === null ? 'Đang kiểm tra' : supabaseStatus?.connected
+              ? supabaseStatus.ready ? 'Sẵn sàng' : 'Chưa có dữ liệu'
+              : supabaseStatus?.configured ? 'Chưa kết nối' : 'Chưa cấu hình'}
           </span>
-        ) : (
-          <span className="text-amber-400 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-            {supabaseStatus?.error ? 'Lỗi Supabase' : 'Local Data'}
-          </span>
-        )}
+        </p>
       </div>
     </aside>
   </>;

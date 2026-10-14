@@ -1,44 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Strip any accidental trailing /rest/v1 or trailing slashes
-function sanitizeSupabaseUrl(url: string | undefined): string {
-  if (!url) return '';
-  return url.trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
-}
+export type SupabaseStatus = {
+  configured: boolean; connected: boolean; ready?: boolean;
+  error?: 'not_configured' | 'invalid_config' | 'health_unavailable';
+};
 
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-export const supabaseUrl = sanitizeSupabaseUrl(rawUrl);
-export const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
-
-export const isSupabaseConfigured = Boolean(
-  supabaseUrl &&
-  supabaseAnonKey &&
-  !supabaseUrl.includes('placeholder') &&
-  !supabaseUrl.includes('your-project-id')
-);
-
-// Fallback-safe client instance
-export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
-
-// Function to check live connection to Supabase
-export async function checkSupabaseConnection(): Promise<{
-  connected: boolean;
-  tableCount?: number;
-  error?: string;
-}> {
-  if (!supabase) {
-    return { connected: false, error: 'Chưa cấu hình Supabase URL hoặc Key' };
-  }
+// The connection probe exposes only readiness, never corpus or persona rows.
+export async function checkSupabaseConnection(): Promise<SupabaseStatus> {
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+  const key = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
+  if (!url || !key || /placeholder|your-project-id/.test(url)) return { configured: false, connected: false, error: 'not_configured' };
   try {
-    const { data, error } = await supabase.from('personas').select('user_id').limit(10);
-    if (error) {
-      return { connected: false, error: error.message };
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) {
+      return { configured: true, connected: false, error: 'invalid_config' };
     }
-    return { connected: true, tableCount: data?.length || 0 };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { connected: false, error: message };
+    const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+    const { data, error } = await client.rpc('knowledge_health').abortSignal(AbortSignal.timeout(5000));
+    if (error || typeof data !== 'boolean') return { configured: true, connected: false, error: 'health_unavailable' };
+    return { configured: true, connected: true, ready: data };
+  } catch {
+    return { configured: true, connected: false, error: 'health_unavailable' };
   }
 }

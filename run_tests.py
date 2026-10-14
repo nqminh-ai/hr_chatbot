@@ -8,6 +8,9 @@ from engine.core import KnowledgeAssistant
 from engine.filter import AccessFilter
 
 ROOT = Path(__file__).resolve().parent
+SCENARIO_SUITES = {"public": ROOT / "tests/test_cases.json",
+                  "private": ROOT / "tests/private_test_cases.json",
+                  "detailed": ROOT / "tests/detailed_test_cases.json"}
 EXPECTED_KEYS = {
     "status", "days", "notice_days", "primary_doc", "inherited_docs",
     "should_exclude", "refusal", "no_leakage", "should_not_mention",
@@ -83,6 +86,10 @@ def run_all_tests(cases_path=ROOT / "tests/test_cases.json", query_date="2026-10
         errors = evaluate_expected(actual, case["expected"])
         results.append({"id": case["id"], "passed": not errors, "errors": errors, "actual": actual})
     return results
+
+
+def run_all_suites(database_file=None):
+    return {name: run_all_tests(path, database_file=database_file) for name, path in SCENARIO_SUITES.items()}
 
 
 def main(argv=None):

@@ -60,7 +60,7 @@ Test database đang chỉnh:
 .\.venv\Scripts\python.exe -B -m unittest discover -s tests -p test_database.py -v
 ```
 
-Scenario mặc định vẫn dùng JSON seed cố định, còn `run_private_tests.bat` dùng database thật. Vì kỳ vọng scenario là fixture 14 ngày, đổi dữ liệu mock thành 15 sẽ làm case tương ứng FAIL; đó là khác biệt dữ liệu cần review. PT32 vẫn là lỗi lexical đã ghi nhận độc lập với database.
+Scenario mặc định vẫn dùng JSON seed cố định, còn `run_private_tests.bat` dùng database thật. Vì kỳ vọng scenario là fixture 14 ngày, đổi dữ liệu mock thành 15 sẽ làm case tương ứng FAIL; đó là khác biệt dữ liệu cần review. PT32 đã được sửa bằng taxonomy dùng chung với TypeScript; truy vấn chỉ có năm được yêu cầu bổ sung ngày cụ thể.
 
 ## Quan hệ bảng
 

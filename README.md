@@ -7,15 +7,15 @@ Demo trợ lý tra cứu chính sách nghỉ phép, có hội thoại nhiều l�
 | Thành phần | Cách hoạt động |
 | --- | --- |
 | Chat Next.js | API `/api/chat` chạy trong Next.js, đối chiếu chính sách từ `data/knowledge.json` bằng `frontend/src/lib/policy.server.ts`. |
-| Gemini | Tùy chọn; chỉ bật khi có API key và `GEMINI_ENABLED=true`. Khi gọi model lỗi, ứng dụng trả kết quả đối chiếu điều khoản. |
-| Supabase | Đã có client và kiểm tra kết nối bằng truy vấn bảng `personas`. Chưa dùng Supabase để trả lời chính sách hoặc lưu lịch sử chat. |
-| Lịch sử hội thoại | Lưu trong `localStorage` của trình duyệt hiện tại. |
+| Gemini | Tùy chọn; model chọn cách trình bày bằng JSON có schema. Server kiểm tra fact IDs rồi render giá trị/đơn vị/nguồn từ dữ liệu đã xác thực. Lỗi model dùng kết quả rule engine. |
+| Supabase | Kiểm tra kết nối bằng RPC `knowledge_health()`, chỉ trả boolean. Chưa dùng Supabase để trả lời chính sách hoặc lưu lịch sử chat. |
+| Lịch sử hội thoại | `localStorage` phiên bản 2; kiểm tra ngày, citations, graph, trace và context trước khi khôi phục. |
 | Backend Python | Rule engine trong `engine/`, giao diện Streamlit trong `app.py`, API Python trong `api/index.py`. Next.js chưa gọi API Python. |
 | Dữ liệu | Bộ chính sách và nhân sự mẫu; lựa chọn persona là bối cảnh tra cứu mẫu, chưa có đăng nhập/SSO thật. |
 
 ## Chạy chatbot local
 
-Cần Node.js từ **20.9.0** trở lên theo yêu cầu của phiên bản Next.js trong project. Chạy từ thư mục gốc bằng PowerShell:
+Cần Node.js **20.19+ hoặc 22.12+** cho bộ công cụ hiện tại; đã kiểm tra trên Node 24. Chạy từ thư mục gốc bằng PowerShell:
 
 ```powershell
 cd frontend
@@ -56,7 +56,7 @@ Với cấu hình này, Vercel triển khai giao diện và API **Next.js**. Kh�
 
 ## Backend Python local
 
-Backend, schema, dữ liệu và test Python được giữ nguyên. Môi trường đã kiểm chứng là CPython 3.14.5 trên Windows; `.python-version` ghi nhánh `3.14`. `requirements.lock` chứa version và SHA-256 wheel cho môi trường Windows đã kiểm chứng, không dùng lock này để cài dependency trên Vercel Linux.
+Backend, schema, dữ liệu và test Python tiếp tục được duy trì. Môi trường đã kiểm chứng là CPython 3.14.5 trên Windows; `.python-version` ghi nhánh `3.14`. `requirements.lock` chứa version và SHA-256 wheel cho môi trường Windows đã kiểm chứng, không dùng lock này để cài dependency trên Vercel Linux.
 
 Chạy từ thư mục gốc:
 
@@ -94,22 +94,23 @@ Dùng `manage_database.bat` hoặc `manage_database.py` để quản trị SQLit
 Để tạo lại seed Supabase từ database local:
 
 ```powershell
-.\.venv\Scripts\python.exe -B scripts/export_sqlite_to_supabase.py
+.\.venv\Scripts\python.exe -B scripts/export_sqlite_to_supabase.py --mode fresh
+.\.venv\Scripts\python.exe -B scripts/verify_provenance.py
 ```
 
-Hướng dẫn nạp schema/seed và kiểm tra kết nối nằm trong [frontend/README.md](frontend/README.md#supabase).
+Exporter đọc một transaction SQLite, validate trước khi ghi file và không tự tải dữ liệu lên Supabase. `fresh` dùng INSERT và dừng khi trùng khóa; `upsert` cập nhật khóa có sẵn, giữ các dòng chỉ có ở đích. Xem [quy trình Supabase](supabase/README.md) và [frontend/README.md](frontend/README.md#supabase).
 
 ## Kiểm tra
 
 Frontend, chạy trong `frontend/`:
 
 ```powershell
-npm.cmd run test:chat
+npm.cmd test
 npm.cmd run lint
 npm.cmd run build
 ```
 
-`test:chat` mock các lời gọi Gemini, không kiểm chứng API key hay model thật.
+`npm test` chạy validation dữ liệu/body, contracts, kiểm tra output Gemini, API chat, React UI và migration/read-back PostgreSQL nhúng. Test SQL cần `.venv` ở root; có thể đặt `APPOTA_PYTHON` để chọn interpreter khác. Các test này không gọi dịch vụ thật. `npm run test:gemini:live` gửi đúng câu hỏi mẫu cùng fact mẫu tới Google và ghi kết quả trong `docs/evidence/gemini_live.json`.
 
 Backend, chạy từ thư mục gốc:
 
@@ -119,7 +120,7 @@ Backend, chạy từ thư mục gốc:
 .\.venv\Scripts\python.exe -B validate.py
 ```
 
-`validate.py` tạo báo cáo trong `docs/evidence/`; `benchmark.py` tạo báo cáo hiệu năng local. Các báo cáo sinh ra được Git bỏ qua. Scenario dùng ngày cố định; ngày mặc định trong ứng dụng theo `Asia/Ho_Chi_Minh`.
+`validate.py` kiểm tra toàn bộ public/private/detailed cùng contract Python–TypeScript và tạo báo cáo trong `docs/evidence/`. `benchmark.py` đo cả engine, tái dựng bảng và đọc SQLite có/không có cache. Các báo cáo sinh ra được Git bỏ qua. Scenario dùng ngày cố định; ngày mặc định trong ứng dụng theo `Asia/Ho_Chi_Minh`.
 
 ## Phạm vi demo
 
@@ -127,7 +128,7 @@ Chat hỗ trợ hỏi về số ngày phép, thời hạn báo trước, ngườ
 
 Quy tắc fixture vẫn giữ khoảng trống chính sách A tại **28/02/2026**, đơn vị `unspecified_days` cho quy định báo trước của Team và các quyết định migration M01–M06 chưa được xác nhận. Persona mẫu không thay thế xác thực người dùng. Chưa có đồng bộ hội thoại theo tài khoản, vector database hay audit log bền vững.
 
-Khi bật Gemini, câu hỏi, tối đa 6 câu hỏi trước đó và điều khoản đã lọc được gửi sang Google; không gửi toàn bộ kho hay nội dung assistant từ client. Chỉ dùng dữ liệu mẫu cho cấu hình demo hiện tại. Schema Supabase hiện có policy đọc công khai và policy toàn quyền cho bảng chat, chưa phải phân quyền theo nhân viên.
+Khi bật Gemini, câu hỏi, tối đa 6 câu hỏi trước đó và điều khoản đã lọc được gửi sang Google; không gửi toàn bộ kho hay nội dung assistant từ client. Chỉ dùng dữ liệu mẫu cho cấu hình demo hiện tại. Schema Supabase mới đóng quyền công khai trên corpus/chat; database đã triển khai cần chạy migration rồi kiểm tra quyền. Persona mẫu vẫn chưa phải xác thực nhân viên.
 
 ## Tài liệu
 
@@ -137,5 +138,6 @@ Khi bật Gemini, câu hỏi, tối đa 6 câu hỏi trước đó và điều k
 - [Quy tắc và kiến trúc backend](docs/accuracy_rules_and_graph_architecture.md)
 - [Scenario kiểm thử](docs/test_cases.md)
 - [Bộ kiểm thử chi tiết](docs/detailed_test_cases.md)
+- [Tiến độ triển khai và bằng chứng kiểm tra](docs/implementation_progress.md)
 
 Các kế hoạch, báo cáo và ảnh cũ đã dọn khỏi repository. Bản sao local của đợt dọn nằm trong `.cleanup-backups/` trên máy thực hiện, không được đưa lên GitHub.

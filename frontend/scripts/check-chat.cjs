@@ -1,33 +1,12 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
-const { createRequire } = require('node:module');
-const ts = require('typescript');
+const { createLoader } = require('./test-loader.cjs');
 const root = path.resolve(__dirname, '..');
-const cache = new Map();
 const environment = {};
 let fetchImpl = () => { throw new Error('Unexpected network request'); };
 let externalCalls = 0;
 
-function load(file) {
-  if (cache.has(file)) return cache.get(file).exports;
-  const loadedModule = { exports: {} };
-  cache.set(file, loadedModule);
-  const localRequire = createRequire(file);
-  const customRequire = name => {
-    if (name.startsWith('.')) {
-      const resolved = path.resolve(path.dirname(file), name);
-      if (fs.existsSync(resolved + '.ts')) return load(resolved + '.ts');
-    }
-    return localRequire(name);
-  };
-  const compiled = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
-  const scope = { module: loadedModule, exports: loadedModule.exports, require: customRequire, process: { env: environment }, console,
-    fetch: (...args) => { externalCalls++; return fetchImpl(...args); }, AbortSignal, TextEncoder, URL, Response, Request, setTimeout, clearTimeout };
-  new vm.Script(compiled, { filename: file }).runInNewContext(scope);
-  return loadedModule.exports;
-}
+const load = createLoader(environment, (...args) => { externalCalls++; return fetchImpl(...args); });
 
 async function main() {
   const { policyAnswer, validDate } = load(path.join(root, 'src/lib/policy.server.ts'));
@@ -55,11 +34,14 @@ async function main() {
     const result = policyAnswer('lan', query, day); check(result.status === 'refused' && !result.facts.length, 'Denied requests have no evidence');
   }
   check(policyAnswer('missing', 'Nghỉ phép?', day).status === 'refused', 'Unknown persona does not fall back to Lan');
+  for (const persona of ['constructor', 'toString', '__proto__']) {
+    check(policyAnswer(persona, 'Nghỉ phép?', day).status === 'refused', 'Object prototype names are not personas');
+  }
   check(policyAnswer('nam', 'Nghỉ phép?', day).citations.length === 0, 'Contractor has no policy citations');
   const hung = policyAnswer('hung', 'Báo trước bao lâu?', day);
   check(hung.facts[0].value === 10 && hung.facts[0].unit === 'unspecified_days', 'Team notice remains 10 unspecified days, not invented 7 days');
   check(policyAnswer('lan', 'Nghỉ phép năm 2025?', day).status === 'needs_clarification', 'Year-only request is clarified');
-  check(!validDate('2026-02-30') && validDate(day), 'Impossible dates rejected');
+  check(!validDate('2026-02-30') && !validDate('0000-01-01') && validDate(day), 'Impossible dates rejected');
   const ids = new Set(lan.graph.nodes.map(node => node.id));
   check(lan.graph.edges.every(edge => ids.has(edge.source) && ids.has(edge.target)), 'Graph has no dangling edges');
   environment.GEMINI_API_KEY = 'fake-test-key';
@@ -74,7 +56,7 @@ async function main() {
   fetchImpl = async (url, options) => {
     check(url.startsWith('https://generativelanguage.googleapis.com/'), 'Only official Gemini endpoint used');
     sent = JSON.parse(options.body);
-    return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'Bạn có 14 ngày phép năm.' }] } }] }), { status: 200 });
+    return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({ status: 'ok', fact_ids: ['POL-A-LV@v2.0#entitlement'], style: 'concise' }) }] } }] }), { status: 200 });
   };
   const response = await (await ask({ query: 'Nghỉ phép bao nhiêu ngày?', messages: [{ sender: 'assistant', content: 'Secret fake policy text' }, { sender: 'user', content: 'Chào' }] })).json();
   check(response.provider === 'gemini', 'Configured Gemini adapter returns model reply');

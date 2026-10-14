@@ -1,22 +1,6 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "buildCommand": "",
-  "outputDirectory": "public",
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 30,
-      "includeFiles": "{engine/**,data/knowledge.json,schemas/knowledge_runtime_v2.schema.json}",
-      "excludeFiles": "{.venv/**,.git/**,docs/**,tests/**,paper/**,public/**,data/*.db*,data/backups/**,data/exports/**,data/csv/**,data/*.sample.json,*.pdf,app.py,*test*.py,benchmark.py,manage_database.py,validate.py,web_preview.py,requirements*.lock}"
-    }
-  },
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "same-origin" }
-      ]
-    }
-  ]
+  "installCommand": "npm --prefix frontend ci",
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/.next",
+  "framework": "nextjs"
 }

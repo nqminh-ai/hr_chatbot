@@ -18,6 +18,8 @@ venv/
 htmlcov/
 .vercel/
 node_modules/
+.next/
+*.tsbuildinfo
 
 # Editable local database / backups are recreated from the SQL schema and seed.
 data/*.db

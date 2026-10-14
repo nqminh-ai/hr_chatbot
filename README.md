@@ -1,29 +1,16 @@
 # Appota Internal Knowledge V2
 
-Demo tra cứu chính sách nghỉ phép bằng rule engine Python, metadata có validation và knowledge graph theo persona/ngày. Bản web Vercel dùng JSON seed; bản Streamlit local dùng SQLite. Không dùng LLM, vector DB hoặc SSO thật. Dữ liệu là mock; không đưa ứng dụng này vào sử dụng với dữ liệu nhân sự thật khi chưa tích hợp xác thực, governance và review bảo mật phù hợp.
+Demo chatbot chính sách nghỉ phép. Bản chat Next.js dùng JSON seed và tích hợp Gemini tùy chọn; bản Streamlit local dùng rule engine Python/SQLite. Gemini tắt mặc định; chưa có vector DB hoặc SSO thật. Dữ liệu là mock; không đưa ứng dụng này vào sử dụng với dữ liệu nhân sự thật khi chưa tích hợp xác thực, governance và review bảo mật phù hợp.
 
-## Deploy lên Vercel
+## Chatbot và deploy lên Vercel
 
-Import repo `nqminh-ai/hr_chatbot` trong Vercel, chọn nhánh `main` và giữ **Root Directory** ở thư mục gốc. Framework Preset là **Other**; không cần Build Command hoặc biến môi trường. `vercel.json` đã đặt Output Directory là `public` và cấu hình Python Function `api/index.py` tại `/api`.
+Bản chat hiện tại nằm trong `frontend/`: hội thoại nhiều lượt, câu hỏi nối tiếp, lịch sử lưu trên trình duyệt và nguồn theo từng câu trả lời. Thiết lập nhân sự/ngày áp dụng được thu gọn; đổi bối cảnh mở cuộc trò chuyện mới.
 
-- `public/`: giao diện web gồm trả lời, sơ đồ tri thức, trace và xuất graph JSON.
-- `api/index.py`: API HTTP dùng lại engine, kiểm tra request và trả graph đã được lọc theo persona/ngày.
-- `requirements.txt`: dependency Python cho Vercel; không cài Streamlit trên serverless.
-- `.python-version`: chọn Python 3.14; Vercel quản lý bản patch của runtime.
+Import repo `nqminh-ai/hr_chatbot` trên Vercel và đặt **Root Directory = frontend**, **Framework Preset = Next.js**. Giữ build/install/output mặc định của Next.js và bật tùy chọn cho phép build đọc file ngoài Root Directory để lấy JSON seed tại `data/knowledge.json`.
 
-Bản Vercel đọc snapshot chỉ đọc từ `data/knowledge.json` và runtime schema đã commit. Không cần Supabase hoặc SQLite để chạy demo. Chỉnh JSON rồi push để cập nhật dữ liệu qua lần deploy tiếp theo. Chỉnh SQLite/CSV local không tự đổi dữ liệu bản Vercel. Nếu cần quản trị chính sách online, tài khoản thật hoặc lưu lịch sử lâu dài, cần tích hợp database ngoài; repo hiện chưa có tính năng này. Không lưu thay đổi vào filesystem của Vercel Function.
+Gemini tắt mặc định. Khi bật, API gửi các điều khoản đã lọc cùng câu hỏi/ngữ cảnh liên quan; dữ liệu vẫn được gửi ra Google. Bộ chính sách hiện là mẫu, không cần Supabase để chạy. Chưa có đăng nhập thật hay đồng bộ lịch sử qua database.
 
-Chạy giao diện web local để kiểm tra:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -B web_preview.py
-```
-
-Mở `http://127.0.0.1:8000`. Để chạy thêm Streamlit và toàn bộ test local, cài `requirements.lock` theo hướng dẫn bên dưới hoặc `requirements-dev.txt`.
-
-Tài liệu nền tảng: [Python Functions](https://vercel.com/docs/functions/runtimes/python/api-directory), [cấu hình Vercel](https://vercel.com/docs/project-configuration/vercel-json), [giới hạn SQLite](https://vercel.com/kb/guide/is-sqlite-supported-in-vercel).
+Xem [frontend/README.md](frontend/README.md) và [hướng dẫn triển khai](DEPLOY_VERCEL_SUPABASE.md) để cấu hình Gemini và kiểm tra. Python API `api/index.py` cùng giao diện `public/` là bản web cũ, vẫn có thể chạy local qua `web_preview.py`; chúng không phải giao diện chat Next.js hiện tại.
 
 ## Chạy trên Windows
 

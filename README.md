@@ -1,12 +1,35 @@
 # Appota Internal Knowledge V2
 
-Demo tra cứu chính sách nghỉ phép bằng rule engine local, metadata có validation và knowledge graph theo persona/ngày. Không dùng LLM, vector DB hoặc SSO thật. Dữ liệu là mock; không đưa ứng dụng này vào sử dụng với dữ liệu nhân sự thật khi chưa tích hợp xác thực, governance và review bảo mật phù hợp.
+Demo tra cứu chính sách nghỉ phép bằng rule engine Python, metadata có validation và knowledge graph theo persona/ngày. Bản web Vercel dùng JSON seed; bản Streamlit local dùng SQLite. Không dùng LLM, vector DB hoặc SSO thật. Dữ liệu là mock; không đưa ứng dụng này vào sử dụng với dữ liệu nhân sự thật khi chưa tích hợp xác thực, governance và review bảo mật phù hợp.
+
+## Deploy lên Vercel
+
+Import repo `nqminh-ai/hr_chatbot` trong Vercel, chọn nhánh `main` và giữ **Root Directory** ở thư mục gốc. Framework Preset là **Other**; không cần Build Command hoặc biến môi trường. `vercel.json` đã đặt Output Directory là `public` và cấu hình Python Function `api/index.py` tại `/api`.
+
+- `public/`: giao diện web gồm trả lời, sơ đồ tri thức, trace và xuất graph JSON.
+- `api/index.py`: API HTTP dùng lại engine, kiểm tra request và trả graph đã được lọc theo persona/ngày.
+- `requirements.txt`: dependency Python cho Vercel; không cài Streamlit trên serverless.
+- `.python-version`: chọn Python 3.14; Vercel quản lý bản patch của runtime.
+
+Bản Vercel đọc snapshot chỉ đọc từ `data/knowledge.json` và runtime schema đã commit. Không cần Supabase hoặc SQLite để chạy demo. Chỉnh JSON rồi push để cập nhật dữ liệu qua lần deploy tiếp theo. Chỉnh SQLite/CSV local không tự đổi dữ liệu bản Vercel. Nếu cần quản trị chính sách online, tài khoản thật hoặc lưu lịch sử lâu dài, cần tích hợp database ngoài; repo hiện chưa có tính năng này. Không lưu thay đổi vào filesystem của Vercel Function.
+
+Chạy giao diện web local để kiểm tra:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -B web_preview.py
+```
+
+Mở `http://127.0.0.1:8000`. Để chạy thêm Streamlit và toàn bộ test local, cài `requirements.lock` theo hướng dẫn bên dưới hoặc `requirements-dev.txt`.
+
+Tài liệu nền tảng: [Python Functions](https://vercel.com/docs/functions/runtimes/python/api-directory), [cấu hình Vercel](https://vercel.com/docs/project-configuration/vercel-json), [giới hạn SQLite](https://vercel.com/kb/guide/is-sqlite-supported-in-vercel).
 
 ## Chạy trên Windows
 
 Khi đã cài môi trường `.venv`, nhấp đúp `run_app.bat` để mở ứng dụng tại `http://127.0.0.1:8501`. Giữ cửa sổ chạy mở; nhấn `Ctrl+C` để dừng ứng dụng. File chạy dùng Python trong `.venv` của dự án và hiển thị lỗi nếu môi trường chưa sẵn sàng.
 
-Môi trường đã kiểm chứng: **CPython 3.14.5 / Windows 11**. `.python-version` ghi runtime; `requirements.lock` khóa đủ 43 dependency trực tiếp và transitive bằng version và SHA-256 wheel. Lock artifact này dành cho Windows/ABI đã kiểm chứng; nền tảng khác cần tạo lock thích hợp. Không dùng `pypdf` vì code không ingest PDF.
+Môi trường local đã kiểm chứng: **CPython 3.14.5 / Windows 11**. `.python-version` ghi nhánh runtime 3.14; `requirements.lock` khóa đủ 43 dependency local trực tiếp và transitive bằng version và SHA-256 wheel. Lock artifact này dành cho Windows/ABI đã kiểm chứng, không dùng cho build Vercel Linux; nền tảng khác cần tạo lock thích hợp. Không dùng `pypdf` vì code không ingest PDF.
 
 ```powershell
 python -m venv .venv

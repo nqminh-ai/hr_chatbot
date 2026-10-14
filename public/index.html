@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Demo tra cứu chính sách nghỉ phép Appota theo nhân sự và ngày áp dụng, kèm nguồn và sơ đồ tri thức.">
+  <title>Appota · Tri thức nội bộ</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Appota, trang chủ"><img src="/favicon.svg" alt="" width="38" height="38"><span>appota<span class="brand-sub">KNOWLEDGE HUB</span></span></a>
+      <div class="sidebar-heading">PHẠM VI TRA CỨU</div>
+      <label for="persona">Nhân sự</label>
+      <select id="persona" disabled><option>Đang tải nhân sự…</option></select>
+      <label for="date">Ngày áp dụng</label>
+      <input id="date" type="date" required disabled>
+      <div class="profile-card"><div class="avatar" id="avatar">A</div><strong id="profile-name">Đang tải…</strong><p id="profile-description"></p><p class="scope" id="scope"></p></div>
+      <div class="demo-note"><span class="demo-dot"></span><div><strong>Dữ liệu demo</strong><p>Nhân sự và chính sách giả lập. Chọn nhân sự để khám phá từng phạm vi.</p></div></div>
+      <div class="sidebar-footer">Appota · Tri thức nội bộ V2</div>
+    </aside>
+    <main>
+      <header><div class="eyebrow">CHÍNH SÁCH NHÂN SỰ <span class="badge">DEMO</span></div><h1>Chính sách rõ ràng.<br><span>Câu trả lời có nguồn.</span></h1><p class="intro">Tra cứu quy định nghỉ phép theo nhân sự và ngày áp dụng.</p></header>
+      <section class="question-card" aria-label="Đặt câu hỏi">
+        <form id="question-form">
+          <label for="query">Bạn muốn tìm hiểu điều gì?</label>
+          <div class="question-row"><input id="query" type="text" maxlength="4000" required placeholder="Ví dụ: Tôi được nghỉ phép bao nhiêu ngày?" value="Quy định nghỉ phép của tôi như thế nào?"><button id="submit" type="submit" disabled>Tra cứu <span aria-hidden="true">↗</span></button></div>
+        </form>
+        <div class="suggestions" aria-label="Câu hỏi gợi ý"><button type="button" data-query="Tôi được nghỉ phép bao nhiêu ngày?">Số ngày phép</button><button type="button" data-query="Tôi cần thông báo nghỉ phép trước bao nhiêu ngày?">Thời hạn báo trước</button><button type="button" data-query="Ai phê duyệt đơn nghỉ phép của tôi?">Người phê duyệt</button></div>
+      </section>
+      <div id="error" class="error" role="alert" hidden><span id="error-message"></span><button id="retry" type="button">Thử lại</button></div>
+      <section class="results-card" aria-label="Kết quả tra cứu" aria-busy="true">
+        <div class="results-heading"><span class="section-label">KẾT QUẢ TRA CỨU</span><span id="status" class="status" role="status" aria-live="polite">Đang tải…</span></div>
+        <div class="tabs" role="tablist" aria-label="Chi tiết kết quả">
+          <button id="tab-answer" class="tab active" role="tab" aria-selected="true" aria-controls="panel-answer" data-panel="answer">Trả lời</button>
+          <button id="tab-graph" class="tab" role="tab" aria-selected="false" aria-controls="panel-graph" tabindex="-1" data-panel="graph">Sơ đồ tri thức</button>
+          <button id="tab-trace" class="tab" role="tab" aria-selected="false" aria-controls="panel-trace" tabindex="-1" data-panel="trace">Trace & nguồn</button>
+        </div>
+        <div id="panel-answer" class="panel" role="tabpanel" aria-labelledby="tab-answer"><p id="answer-date" class="meta"></p><div id="answer" aria-live="polite"><p class="placeholder">Đang chuẩn bị chính sách cho bạn…</p></div><div id="citations" class="citations"></div></div>
+        <div id="panel-graph" class="panel" role="tabpanel" aria-labelledby="tab-graph" hidden><div class="graph-heading"><p>Sơ đồ chính sách áp dụng cho nhân sự và ngày đã chọn.</p><button id="download" class="secondary" type="button" disabled>↓ Xuất graph JSON</button></div><p id="graph-empty" class="placeholder">Chưa có kết quả tra cứu.</p><iframe id="graph" title="Sơ đồ tri thức được phân quyền" sandbox="allow-scripts" hidden></iframe></div>
+        <div id="panel-trace" class="panel" role="tabpanel" aria-labelledby="tab-trace" hidden><p class="meta">Dấu vết và nguồn của kết quả hiện tại.</p><pre id="trace">Chưa có kết quả tra cứu.</pre><div id="source-details"></div></div>
+      </section>
+      <footer>Nguồn chính sách giả lập · Phạm vi được xác định theo nhân sự và ngày tra cứu.</footer>
+    </main>
+  </div>
+  <noscript><p>Vui lòng bật JavaScript để sử dụng tra cứu chính sách.</p></noscript>
+</body>
+</html>

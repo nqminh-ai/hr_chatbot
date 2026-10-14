@@ -32,6 +32,8 @@ def main():
     result = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)
     scenarios = run_all_tests()
     paths = sorted(ROOT.glob("engine/*.py")) + sorted(ROOT.glob("tests/*.py"))
+    paths += sorted((ROOT / "api").glob("*.py")) + sorted((ROOT / "public").glob("*"))
+    paths += [ROOT / name for name in ("vercel.json", "requirements-dev.txt", "web_preview.py")]
     paths += [ROOT / name for name in ("app.py", "run_tests.py", "smoke_test.py", "benchmark.py", "validate.py", "manage_database.py", "run_app.bat", "manage_database.bat", "run_private_tests.bat", "requirements.lock", "requirements.txt", ".python-version", "README.md", "docs/accuracy_rules_and_graph_architecture.md", "docs/database.md", "data/knowledge.json", "schemas/knowledge_runtime_v2.schema.json", "tests/test_cases.json", "tests/private_test_cases.json")]
     paths += sorted((ROOT / "database").glob("*.sql")) + sorted((ROOT / "data/csv").glob("*.csv"))
     report = {"generated_at": datetime.now(timezone.utc).isoformat(), "python": platform.python_version(),

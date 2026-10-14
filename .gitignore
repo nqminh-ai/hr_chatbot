@@ -16,6 +16,8 @@ venv/
 .coverage
 .coverage.*
 htmlcov/
+.vercel/
+node_modules/
 
 # Editable local database / backups are recreated from the SQL schema and seed.
 data/*.db

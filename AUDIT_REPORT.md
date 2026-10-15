@@ -1,216 +1,263 @@
-# AUDIT: Appota Knowledge Copilot — 57/100
-
-Ngày đánh giá: 15/10/2026. Snapshot Git: `5f8416e659817c78bb09854229cec9b4a8561219`. Thư mục: `C:\Users\minh4\OneDrive\Desktop\Appota`.
-
-Phạm vi: code ứng dụng, code kiểm thử, SQL, script và cấu hình dependency liên quan. Không chấm README, báo cáo cũ, slide hoặc deployment. Đây là demo rule engine chính sách nghỉ phép có adapter Gemini, không phải pipeline huấn luyện ML: `engine/core.py:28`, `frontend/src/lib/policy.server.ts:68`, `frontend/src/lib/gemini.server.ts:7`.
-
-Phương pháp: đọc đầy đủ 59 file code, tổng 4.930 dòng kể cả dòng trống; đọc bổ sung schema, seed, source JSON, fixture và manifest dependency. Không chạy code, test, build, notebook, SQL hoặc cài dependency. Những test có trong source được đánh giá về thiết kế, **không được coi là đã pass trong lần audit này**: `tests/test_engine.py:34`, `tests/test_database.py:25`, `frontend/scripts/check-chat.cjs:32`. Chỉ tạo file báo cáo này; không commit/push.
+# AUDIT: Appota Knowledge Copilot — 65/100
 
 ## 1. Bảng điểm
 
 | Hạng mục | Tối đa | Trừ | Cuối | Lý do trừ điểm chính |
-| --- | ---: | ---: | ---: | --- |
-| 1. Tính đúng đắn logic & phương pháp | 25 | 12 | **13** | F01 −4; F02 −3; F03 −2; F04 −2; F05 −1. Câu trả lời model không được đối chiếu lại, routing/ngữ cảnh/thời gian có phản ví dụ từ source. |
-| 2. Xử lý dữ liệu & data leakage | 15 | 10 | **5** | F06 −3; F07 −4; F08 −2; F09 −1. Thiếu validation ở TypeScript, RLS không thực thi ACL, export thiếu snapshot nhất quán, provenance chỉ kiểm tra khai báo. |
-| 3. Chất lượng code & kiến trúc | 15 | 6 | **9** | F10 −2; F11 −2; F12 −1; F13 −1. Hai engine độc lập, hàm lớn, lỗi bị che, dữ liệu lịch sử chưa validate đủ. |
-| 4. Reproducibility | 12 | 4 | **8** | F14 −2; F15 −1; F16 −1. Launcher lỗi, đường cài đặt có thể thay lock, adapter/model thật thiếu bằng chứng kiểm chứng. |
-| 5. Vệ sinh notebook & mạch trình bày | 10 | 0 | **10 — không áp dụng** | Inventory không có `.ipynb`; entrypoint là Python/Next.js (`app.py:39`, `frontend/src/app/page.tsx:3`). Giữ điểm xuất phát theo rubric trừ lỗi; không diễn giải là đã có notebook đạt chuẩn. |
-| 6. Hiệu năng & tối ưu | 8 | 4 | **4** | F17 −2; F18 −1; F19 −1. Reconstruction quét lặp, validation lặp, giới hạn body được kiểm tra sau khi đọc hết. |
-| 7. Kiểm thử & xác thực kết quả | 8 | 3 | **5** | F20 −2; F21 −1. Gate mặc định bỏ qua private/detailed cases, test Next.js thiếu UI và parity giữa hai engine. |
-| 8. Tài liệu, naming, readability | 7 | 4 | **3** | F22 −2; F23 −1; F24 −1. Nhãn nguồn dữ liệu gây hiểu sai, code nén dài, docstring export khẳng định verification chưa triển khai. |
-| **Tổng** | **100** | **43** | **57** | Mỗi khoản trừ được gắn một finding và một hạng mục; không cộng thêm phạt ngoài bảng. |
+|---|---:|---:|---:|---|
+| Tính đúng đắn logic & phương pháp | 25 | 9 | 16 | R01 −3; R02 −2; R03 −2; R06 −2 |
+| Xử lý dữ liệu & data leakage | 15 | 7 | 8 | R04 −3; R07 −2; R09 −1; R15 −1 |
+| Chất lượng code & kiến trúc | 15 | 5 | 10 | R05 −2; R08 −1; R14 −1; R17 −1 |
+| Reproducibility | 12 | 1 | 11 | R11 −1 |
+| Vệ sinh notebook & mạch trình bày | 10 | 0 | 10 | Không áp dụng: inventory không có `.ipynb`; không quy đổi điểm sang hạng mục khác |
+| Hiệu năng & tối ưu | 8 | 2 | 6 | R12 −1; R13 −1 |
+| Kiểm thử & xác thực kết quả | 8 | 3 | 5 | R10 −2; R16 −1 |
+| Tài liệu, naming, readability | 7 | 1 | 6 | R14 −1; chỉ xét nội dung trong code |
+| Tổng theo rubric | 100 | 28 | 72 | Bằng chứng và cách sửa tương ứng ở mục 2 |
 
-Không xác lập finding CRITICAL trong lần đọc này; trần 65 do CRITICAL không được kích hoạt. Những rủi ro chỉ có điều kiện, như quyền truy cập Supabase thực tế và output Gemini thật, được ghi rõ giới hạn bằng chứng ở F01, F07 và F16. Điểm notebook là quy ước giữ thang 100 của rubric, không phải bằng chứng về chất lượng ML/notebook.
+**Điểm cuối: min(72, 65) = 65/100.** Áp trần vì R01 và R04 được xếp CRITICAL theo tiêu chí “kết quả sai/không tin được” của yêu cầu. Khoản giảm do trần là 7 điểm, không gán lại vào hạng mục để tránh đếm lỗi hai lần. Đây là điểm audit tĩnh, không chứng nhận ứng dụng đang chạy thành công.
 
-### Inventory và entrypoint
+### Phạm vi và mức xác minh
 
-Inventory đếm 105 file dự án không bị loại trừ. Loại khỏi inventory source: `.git/`, `.venv/`, `node_modules/`, `.next/`, `.cleanup-backups/`, tài liệu tham chiếu `paper/`, PDF và secret local. Không có notebook. Các nhóm code: 29 Python, 4 SQL, 9 TypeScript, 6 TSX, 5 BAT, 1 JS, 1 CJS, 1 MJS, 2 CSS, 1 HTML.
+- Ngày audit: 15/10/2026; revision `764469b`; thư mục `C:/Users/minh4/OneDrive/Desktop/Appota`. Tên dự án lấy từ `frontend/src/app/layout.tsx:5`; các placeholder trong yêu cầu được đối chiếu với repo hiện tại.
+- Bài toán hiện có là tra cứu chính sách nghỉ phép trên dữ liệu mẫu, với hai rule engine Python/TypeScript; Gemini tùy chọn chọn kiểu trình bày. Không có pipeline huấn luyện ML trong source đã đọc: `engine/core.py:98`, `frontend/src/lib/policy.server.ts:22`, `frontend/src/lib/gemini.server.ts:9`. Dataset tự khai báo `mock_runtime`, không phải chính sách thật: `data/knowledge.json:3`.
+- Inventory: 136 file được Git quản lý; đọc sâu 84 file code, tổng 6.220 dòng, gồm 35 `.py`, 7 `.sql` và 42 file frontend/script khác; không có notebook. Danh sách source và số dòng dưới đây là kết quả đọc tại revision này; dependency đã cài, build output và virtualenv không phải code do dự án quản lý.
+- Đọc thêm schema, fixture JSON/CSV, dependency manifest/lock và cấu hình để đối chiếu code. Không chấm báo cáo cũ, slide, cấu hình deploy hoặc số liệu mà các tài liệu đó tự công bố.
+- Chỉ đọc nội dung, parse cấu trúc và so khớp hash bằng công cụ chuẩn; không import/chạy module dự án, chạy test/build/benchmark/install/smoke test hoặc gọi API. Kết quả chạy hiện tại, latency thực tế, clean install và trạng thái Supabase thật: **[không xác minh được]**. Không tái sử dụng số test pass trong lượt làm việc trước làm bằng chứng audit.
+- Không có source trong phạm vi bị thiếu/không đọc được. Giới hạn bằng chứng chạy được phản ánh qua R10, R11, R16; không suy diễn rằng test đang fail. Không đọc secret `.env.local`; kiểm tra credential chỉ giới hạn ở source và file ví dụ (`frontend/.env.example:3`, `frontend/.env.example:7`).
+- Phản ví dụ trong báo cáo là suy luận tĩnh theo nhánh code, chưa chạy; không phải log lỗi thực tế. Không thay data để dựng lỗi.
+
+### Cây thư mục code
 
 ```text
 Appota/
-├── app.py, api/, web_preview.py       # Streamlit và HTTP Python
-├── engine/                           # Snapshot, validation, routing, ACL, floor, graph
-├── manage_database.py, database/     # Quản trị SQLite
-├── data/, schemas/                   # Seed, CSV, nguồn và JSON Schema
+├── api/                      # API Python
+├── engine/                   # snapshot, validation, intent, policy, storage, provenance
+├── database/                 # SQLite schema/query
+├── scripts/                  # export và xác minh nguồn
+├── supabase/
+│   └── migrations/           # PostgreSQL schema/seed/migration/verification
 ├── frontend/
-│   ├── src/app/                      # Entrypoint Next.js và route API
-│   ├── src/lib/                      # Rule engine TS, Gemini, Supabase, lịch sử
-│   ├── src/components/               # Chat, sidebar, inspector
-│   └── scripts/check-chat.cjs         # Test adapter/rule engine TS
-├── scripts/, supabase/               # Export và schema/seed PostgreSQL
-├── public/                           # UI dùng HTTP Python
-├── tests/                            # Unit/integration/UI Python và scenario fixtures
-└── run_*.bat, run_tests.py, validate.py, smoke_test.py, benchmark.py
+│   ├── scripts/              # check và loader
+│   ├── src/
+│   │   ├── app/api/chat/     # Next.js entrypoint API
+│   │   ├── components/      # chat/inspector
+│   │   ├── lib/             # policy engine/validation TypeScript
+│   │   └── types/
+│   └── tests/
+├── public/                   # giao diện Python API
+├── tests/                    # unit tests/fixtures
+├── data/                     # corpus/intent rules/CSV
+├── schemas/                  # runtime/design schema
+└── *.py, *.bat               # entrypoint/script ở gốc; liệt kê đầy đủ dưới đây
 ```
 
-Mọi file code đã đọc, số dòng vật lý:
+### Inventory từng file code
 
-| File | Dòng | File | Dòng |
-| --- | ---: | --- | ---: |
-| `app.py:1` | 75 | `api/index.py:1` | 95 |
-| `web_preview.py:1` | 49 | `manage_database.py:1` | 70 |
-| `run_tests.py:1` | 112 | `validate.py:1` | 56 |
-| `smoke_test.py:1` | 19 | `benchmark.py:1` | 73 |
-| `scripts/export_sqlite_to_supabase.py:1` | 111 | `engine/core.py:1` | 118 |
-| `engine/filter.py:1` | 27 | `engine/generator.py:1` | 56 |
-| `engine/graph_view.py:1` | 45 | `engine/hierarchy.py:1` | 49 |
-| `engine/identity.py:1` | 17 | `engine/knowledge_graph.py:1` | 55 |
-| `engine/metadata.py:1` | 172 | `engine/models.py:1` | 91 |
-| `engine/semantic_matcher.py:1` | 95 | `engine/snapshot.py:1` | 71 |
-| `engine/storage.py:1` | 163 | `engine/tabular.py:1` | 189 |
-| `engine/timeline.py:1` | 33 | `engine/trace.py:1` | 11 |
-| `tests/test_database.py:1` | 231 | `tests/test_engine.py:1` | 385 |
-| `tests/test_runner.py:1` | 139 | `tests/test_ui.py:1` | 90 |
-| `tests/test_web.py:1` | 129 | `database/schema.sql:1` | 110 |
-| `database/queries.sql:1` | 33 | `supabase/schema.sql:1` | 221 |
-| `supabase/seed.sql:1` | 82 | `manage_database.bat:1` | 54 |
-| `run_app.bat:1` | 66 | `run_frontend.bat:1` | 45 |
-| `run_private_tests.bat:1` | 21 | `run_detailed_tests.bat:1` | 21 |
-| `public/app.js:1` | 166 | `public/index.html:1` | 51 |
-| `public/styles.css:1` | 1 | `frontend/next.config.ts:1` | 20 |
-| `frontend/eslint.config.mjs:1` | 25 | `frontend/scripts/check-chat.cjs:1` | 96 |
-| `frontend/src/app/page.tsx:1` | 5 | `frontend/src/app/layout.tsx:1` | 19 |
-| `frontend/src/app/globals.css:1` | 35 | `frontend/src/app/api/chat/route.ts:1` | 2 |
-| `frontend/src/components/ChatArea.tsx:1` | 242 | `frontend/src/components/ChatClient.tsx:1` | 110 |
-| `frontend/src/components/ConversationSidebar.tsx:1` | 45 | `frontend/src/components/InspectorDrawer.tsx:1` | 206 |
-| `frontend/src/lib/chat-handler.server.ts:1` | 53 | `frontend/src/lib/conversations.ts:1` | 19 |
-| `frontend/src/lib/gemini.server.ts:1` | 36 | `frontend/src/lib/mockData.ts:1` | 52 |
-| `frontend/src/lib/policy.server.ts:1` | 163 | `frontend/src/lib/supabase.ts:1` | 44 |
-| `frontend/src/types/index.ts:1` | 61 | — | — |
+| File | Số dòng |
+|---|---:|
+| `api/index.py` | 95 |
+| `app.py` | 75 |
+| `benchmark.py` | 101 |
+| `contracts.py` | 50 |
+| `database/queries.sql` | 33 |
+| `database/schema.sql` | 110 |
+| `engine/core.py` | 118 |
+| `engine/filter.py` | 27 |
+| `engine/generator.py` | 56 |
+| `engine/graph_view.py` | 45 |
+| `engine/hierarchy.py` | 49 |
+| `engine/identity.py` | 17 |
+| `engine/knowledge_graph.py` | 55 |
+| `engine/metadata.py` | 176 |
+| `engine/models.py` | 91 |
+| `engine/provenance.py` | 89 |
+| `engine/semantic_matcher.py` | 137 |
+| `engine/snapshot.py` | 71 |
+| `engine/storage.py` | 163 |
+| `engine/tabular.py` | 195 |
+| `engine/timeline.py` | 33 |
+| `engine/trace.py` | 11 |
+| `frontend/eslint.config.mjs` | 25 |
+| `frontend/next.config.ts` | 20 |
+| `frontend/scripts/check-all.cjs` | 10 |
+| `frontend/scripts/check-chat.cjs` | 78 |
+| `frontend/scripts/check-contracts.cjs` | 25 |
+| `frontend/scripts/check-data.cjs` | 51 |
+| `frontend/scripts/check-gemini.cjs` | 23 |
+| `frontend/scripts/check-gemini-live.cjs` | 32 |
+| `frontend/scripts/check-supabase.cjs` | 89 |
+| `frontend/scripts/test-loader.cjs` | 34 |
+| `frontend/src/app/api/chat/route.ts` | 2 |
+| `frontend/src/app/globals.css` | 35 |
+| `frontend/src/app/layout.tsx` | 19 |
+| `frontend/src/app/page.tsx` | 5 |
+| `frontend/src/components/ChatArea.tsx` | 242 |
+| `frontend/src/components/ChatClient.tsx` | 136 |
+| `frontend/src/components/ConversationSidebar.tsx` | 42 |
+| `frontend/src/components/InspectorDrawer.tsx` | 206 |
+| `frontend/src/lib/calendar.ts` | 9 |
+| `frontend/src/lib/chat-handler.server.ts` | 73 |
+| `frontend/src/lib/chat-validation.ts` | 71 |
+| `frontend/src/lib/conversations.ts` | 24 |
+| `frontend/src/lib/dataset.server.ts` | 124 |
+| `frontend/src/lib/gemini.server.ts` | 51 |
+| `frontend/src/lib/intent.server.ts` | 67 |
+| `frontend/src/lib/mockData.ts` | 6 |
+| `frontend/src/lib/policy.server.ts` | 58 |
+| `frontend/src/lib/policy-resolution.server.ts` | 115 |
+| `frontend/src/lib/request-body.server.ts` | 26 |
+| `frontend/src/lib/supabase.ts` | 25 |
+| `frontend/src/types/index.ts` | 64 |
+| `frontend/tests/chat-ui.test.tsx` | 97 |
+| `frontend/tests/history.test.ts` | 37 |
+| `frontend/vitest.config.mts` | 7 |
+| `manage_database.bat` | 54 |
+| `manage_database.py` | 70 |
+| `public/app.js` | 166 |
+| `public/index.html` | 51 |
+| `public/styles.css` | 1 |
+| `run_app.bat` | 63 |
+| `run_detailed_tests.bat` | 21 |
+| `run_frontend.bat` | 42 |
+| `run_private_tests.bat` | 21 |
+| `run_tests.py` | 119 |
+| `scripts/export_sqlite_to_supabase.py` | 178 |
+| `scripts/verify_provenance.py` | 19 |
+| `smoke_test.py` | 19 |
+| `supabase/migrations/20261015_close_public_access.sql` | 43 |
+| `supabase/migrations/20261015_dataset_created_on_date.sql` | 13 |
+| `supabase/schema.sql` | 230 |
+| `supabase/seed.sql` | 81 |
+| `supabase/verify_access.sql` | 35 |
+| `tests/test_contract_oracle.py` | 39 |
+| `tests/test_database.py` | 231 |
+| `tests/test_engine.py` | 386 |
+| `tests/test_export_provenance.py` | 77 |
+| `tests/test_runner.py` | 139 |
+| `tests/test_snapshot_cache.py` | 56 |
+| `tests/test_ui.py` | 90 |
+| `tests/test_web.py` | 130 |
+| `validate.py` | 72 |
+| `web_preview.py` | 49 |
 
-Thứ tự chạy được truy vết từ source, không phải kết quả thực thi trong audit:
+Không có `.ipynb` nên không tồn tại cell/execution_count để chấm. Điểm notebook 10/10 áp dụng quy tắc bắt đầu ở tối đa và chỉ trừ lỗi có bằng chứng, không xác nhận chất lượng notebook.
 
-1. **Next.js:** `Home()` → `ChatClient` → POST `/api/chat` → `policyAnswer()` → lọc quyền/thời gian/floor/slot → Gemini nếu bật → response → state/localStorage. Bằng chứng: `frontend/src/app/page.tsx:3`, `frontend/src/components/ChatClient.tsx:75`, `frontend/src/app/api/chat/route.ts:1`, `frontend/src/lib/chat-handler.server.ts:33`, `frontend/src/lib/policy.server.ts:99`, `frontend/src/lib/chat-handler.server.ts:36`, `frontend/src/components/ChatClient.tsx:47`.
-2. **Streamlit:** đọc SQLite → tái dựng dataset → validation → immutable snapshot → chọn persona/ngày → `answer_query()` → routing → ACL/version/floor → synthesis → graph/trace. Bằng chứng: `app.py:21`, `engine/storage.py:73`, `engine/metadata.py:146`, `app.py:44`, `app.py:60`, `engine/core.py:98`, `engine/core.py:104`.
-3. **HTTP Python:** `web_preview.py` phục vụ asset và chuyển `/api` sang handler → JSON seed được cache → `KnowledgeAssistant` → answer/graph. Bằng chứng: `web_preview.py:15`, `api/index.py:16`, `api/index.py:31`, `api/index.py:87`.
-4. **Quản trị:** CSV → parse kiểu → validate SQL trong memory → validate semantic → transaction thay dataset và backup; export Supabase là nhánh riêng, đọc SQLite và viết seed SQL. Bằng chứng: `manage_database.py:45`, `engine/tabular.py:148`, `engine/storage.py:57`, `engine/storage.py:106`, `scripts/export_sqlite_to_supabase.py:60`.
-5. **Kiểm thử:** unittest discovery và 7 scenario mặc định; 35 private case và 38 detailed case chỉ được chọn ở các launcher riêng. Bằng chứng: `validate.py:28`, `validate.py:33`, `run_tests.py:77`, `run_private_tests.bat:15`, `run_detailed_tests.bat:15`.
+### Entrypoint và thứ tự pipeline
+
+| Luồng | Thứ tự thực tế theo code |
+|---|---|
+| Web Next.js | `frontend/src/app/page.tsx:3` → bootstrap GET (`frontend/src/components/ChatClient.tsx:29`) → POST (`frontend/src/components/ChatClient.tsx:99`) → route re-export (`frontend/src/app/api/chat/route.ts:1`) → body validation (`frontend/src/lib/chat-handler.server.ts:33`) → intent/persona/scope (`frontend/src/lib/policy.server.ts:22`) → versions/ACL (`frontend/src/lib/policy-resolution.server.ts:47`) → hierarchy/floor (`frontend/src/lib/policy-resolution.server.ts:69`) → tùy chọn Gemini (`frontend/src/lib/chat-handler.server.ts:53`) → response/UI. |
+| Dataset Next.js | Seed/schema (`frontend/src/lib/dataset.server.ts:4`) → compile (`frontend/src/lib/dataset.server.ts:15`) → snapshot (`frontend/src/lib/dataset.server.ts:99`). Supabase chỉ được probe qua RPC; GET trả `dataSource: 'knowledge.json'` (`frontend/src/lib/chat-handler.server.ts:25`, `frontend/src/lib/supabase.ts:19`). |
+| Streamlit | Đọc SQLite/snapshot/assistant (`app.py:23`) → câu hỏi (`app.py:60`) → refresh/clock/identity/intent (`engine/core.py:83`) → ACL (`engine/core.py:55`) → version (`engine/core.py:65`) → hierarchy/synthesis/graph (`engine/core.py:107`). |
+| API Python/giao diện cũ | Assistant JSON (`api/index.py:16`) → handler (`api/index.py:32`); browser gọi API (`public/app.js:105`); preview server (`web_preview.py:42`). Đây là luồng riêng với Next.js. |
+| Quản trị dữ liệu | CLI (`manage_database.py:37`) → transaction read (`engine/storage.py:73`) hoặc backup/replace/rollback (`engine/storage.py:106`). Export (`scripts/export_sqlite_to_supabase.py:152`) → seed SQL → atomic write (`scripts/export_sqlite_to_supabase.py:61`). |
+| Xác thực | `validate.py:29` định nghĩa chạy unittest/scenario/contract; frontend aggregator chọn sáu nhóm check tại `frontend/scripts/check-all.cjs:3`. Đây là thứ tự từ source, không phải lệnh đã chạy trong audit. |
 
 ## 2. Findings theo mức độ
 
-Các phản ví dụ bên dưới là **truy vết tĩnh** qua nhánh code, không phải log chạy. HIGH không có nghĩa đã quan sát được sự cố trên hệ thống live.
-
 | ID | Mức | File:dòng | Mô tả lỗi | Điểm trừ | Cách sửa |
-| --- | --- | --- | --- | ---: | --- |
-| F07 | HIGH | `supabase/schema.sql:215`, `supabase/schema.sql:220`, `supabase/seed.sql:48` | Policy SELECT `USING (true)` cho phép mọi row, kể cả tài liệu mẫu Confidential; policy ALL trên chat không ràng buộc người sở hữu. Đây là đường database khác với ACL của rule engine. Quyền GRANT, API expose và dữ liệu live **[không xác minh được]**; không khẳng định đã có rò rỉ dữ liệu thật. | 4 — dữ liệu | Ràng buộc RLS theo principal đã xác thực, scope/role và owner hội thoại; kiểm tra cả view và bảng quan hệ. |
-| F01 | HIGH | `frontend/src/lib/gemini.server.ts:33`, `frontend/src/lib/gemini.server.ts:34`, `frontend/src/lib/chat-handler.server.ts:39` | Model output chỉ được kiểm tra có text, `STOP`, độ dài; sau đó thay answer rule engine nhưng giữ citation/trace cũ. Output sai số ngày hoặc tự cấp ngoại lệ vẫn qua điều kiện này. | 4 — logic | Dùng output có cấu trúc, validate claim/status/source với facts; render quyền lợi bằng server và fallback khi không khớp. |
-| F06 | HIGH | `frontend/src/lib/policy.server.ts:2`, `frontend/src/lib/policy.server.ts:16`, `frontend/src/lib/policy.server.ts:69`, `engine/metadata.py:146` | TypeScript import JSON trực tiếp, không kiểm tra runtime schema/semantic hoặc `activation_allowed`. Cờ `isSampleDataset` chỉ chặn Gemini ở adapter; rule answer vẫn chạy. Type inference và SHA dataset không thay thế validation. | 3 — dữ liệu | Validate seed trước khi phục vụ, gồm activation, kiểu/đơn vị, lifecycle, uniqueness và tổ chức; dùng cùng hợp đồng với Python. |
-| F02 | HIGH | `frontend/src/lib/policy.server.ts:89`, `frontend/src/lib/policy.server.ts:136`, `frontend/src/lib/policy.server.ts:144`, `tests/test_engine.py:318` | Router TS chỉ blacklist vài chủ đề; câu không thuộc nghỉ phép vẫn nhận toàn bộ facts khi không có slot. Alias scope dùng substring nên câu chỉ nhắc liên hệ phòng HR cũng bị coi là yêu cầu đọc scope HR. | 3 — logic | Thêm topic/intent gate và phân biệt scope đích với scope được nhắc; dùng regression cases cho cả hai engine. |
-| F03 | HIGH | `frontend/src/lib/policy.server.ts:80`, `frontend/src/lib/policy.server.ts:94`, `frontend/src/lib/policy.server.ts:140`, `frontend/src/components/ChatClient.tsx:76` | Follow-up chỉ kế thừa ngày ISO từ history và một số slot; không kế thừa policy/version đích. Việc chuyển từ ngày lịch sử sang “hiện tại” cũng không được giữ thành context cho lượt sau. | 2 — logic | Lưu context đã resolve gồm ngày, policy/version, slot; cập nhật sau mỗi lượt thay vì tìm lại bằng regex trong text. |
-| F04 | HIGH | `engine/semantic_matcher.py:33`, `engine/semantic_matcher.py:38`, `supabase/seed.sql:42`, `supabase/seed.sql:43`, `frontend/src/lib/policy.server.ts:86` | Python tự biến câu hỏi chỉ có năm thành 01/01. Năm 2026 có cả quyền lợi 12 và 14 ngày theo fixture, nên lấy một ngày đầu năm không đại diện cho cả năm. TS lại yêu cầu làm rõ. | 2 — logic | Hỏi ngày cụ thể hoặc trả các khoảng hiệu lực trong năm; thống nhất hai engine. |
-| F08 | HIGH | `scripts/export_sqlite_to_supabase.py:64`, `scripts/export_sqlite_to_supabase.py:76`, `scripts/export_sqlite_to_supabase.py:100` | Export đọc từng bảng bằng SELECT độc lập, không mở read transaction giữ snapshot. Khi nguồn đổi giữa các SELECT, seed có thể trộn revision. `ON CONFLICT DO NOTHING` cũng giữ row cũ khi nạp lại thay vì đồng bộ cập nhật. | 2 — dữ liệu | Đọc nguồn trong một snapshot read-only nhất quán; validate dataset và định nghĩa rõ import mới hay upsert có kiểm chứng. |
-| F05 | MEDIUM | `engine/semantic_matcher.py:65`, `engine/semantic_matcher.py:67`, `tests/private_test_cases.json:607`, `tests/private_test_cases.json:609` | PT32 kỳ vọng answered cho “Chế độ phép nghỉ thường niên của tôi?”, nhưng topic gate Python không có cụm “phép nghỉ thường niên”; nhánh source trả out_of_scope. | 1 — logic | Bổ sung taxonomy/alias tương ứng và đưa PT32 vào gate bắt buộc. |
-| F09 | MEDIUM | `engine/metadata.py:112`, `engine/metadata.py:92`, `engine/snapshot.py:33` | Provenance hash chỉ được so giữa hai khai báo trong metadata; không đọc source để kiểm tra hash, JSON pointer và giá trị trích dẫn. Fingerprint snapshot kiểm tra nội dung dataset, không chứng minh citation khớp nguồn. | 1 — dữ liệu | Có bước verification nguồn riêng; đánh dấu citation đã kiểm chứng hay chỉ khai báo. |
-| F10 | MEDIUM | `engine/core.py:53`, `engine/hierarchy.py:28`, `frontend/src/lib/policy.server.ts:68`, `frontend/src/lib/mockData.ts:3` | Business rules và persona được triển khai độc lập ở Python, TS và mockData. Khác biệt year routing và PT32 đã có bằng chứng, không chỉ là rủi ro lý thuyết của copy-paste. | 2 — kiến trúc | Một core/hợp đồng chung hoặc bộ contract tests chung; sinh persona từ cùng nguồn. |
-| F11 | MEDIUM | `frontend/src/lib/policy.server.ts:68`, `frontend/src/lib/policy.server.ts:163`, `frontend/src/components/ChatArea.tsx:21`, `frontend/src/components/InspectorDrawer.tsx:16` | `policyAnswer` dài 96 dòng, kết hợp routing, lịch sử, ACL, temporal selection, floor, render, graph và trace. Hai component cũng chứa phần render rất lớn. Khó test từng trách nhiệm riêng. | 2 — kiến trúc | Tách context/intent, policy selection, clause resolution và projection; chia component theo trách nhiệm. |
-| F12 | MEDIUM | `frontend/src/components/ChatClient.tsx:41`, `frontend/src/lib/chat-handler.server.ts:41`, `frontend/src/lib/chat-handler.server.ts:50` | Bootstrap nuốt lỗi bằng catch rỗng. Catch server trả thông báo chung nhưng không giữ loại lỗi hay sự kiện vận hành đã sanitize; khó phân biệt lỗi metadata, model, network và bug. | 1 — kiến trúc | Thông báo lỗi bootstrap; ghi error code/request ID đã sanitize, không log query/key. |
-| F13 | MEDIUM | `frontend/src/lib/conversations.ts:14`, `frontend/src/lib/conversations.ts:17`, `frontend/src/components/ChatArea.tsx:154`, `frontend/src/components/InspectorDrawer.tsx:139` | Restore chỉ validate id/sender/content của message, không validate citations/graph/trace hoặc ngày thật. Ví dụ `citations` là chuỗi vẫn qua restore, nhưng `.map()` khi render sẽ lỗi. | 1 — kiến trúc | Version và validate toàn bộ schema lịch sử; bỏ phần metadata hỏng và migrate format cũ. |
-| F14 | MEDIUM | `run_app.bat:19`, `run_app.bat:39`, `run_app.bat:56`, `run_app.bat:66` | Chọn chạy cả hai nhảy thẳng tới `run_both`, trong khi `APPOTA_PYTHON` chỉ được set trong `run_streamlit`; biến chưa được định nghĩa nếu môi trường ngoài không cung cấp. Script còn luôn exit 0 ở cuối dù nhánh chạy ứng dụng lỗi. | 2 — reproducibility | Khởi tạo/check interpreter trước menu; kiểm tra init/start và trả exit code thực. |
-| F17 | MEDIUM | `engine/tabular.py:101`, `engine/tabular.py:111`, `engine/tabular.py:112`, `engine/tabular.py:126` | Với mỗi document lại quét toàn bộ lifecycle_events, supersedes và clauses. Reconstruction có chi phí khoảng O(D×(E+S+C)) trước sorting. | 2 — hiệu năng | Group/index các row theo doc_uid một lần trước khi dựng documents. |
-| F19 | MEDIUM | `frontend/src/lib/chat-handler.server.ts:22`, `frontend/src/lib/chat-handler.server.ts:23` | Đọc hết body bằng `req.text()` rồi mới kiểm tra 100.000 byte; giới hạn này không ngăn allocation của body quá lớn trước đó. | 1 — hiệu năng | Giới hạn stream khi đọc, kiểm tra Content-Length hỗ trợ và hủy khi vượt cap. |
-| F20 | MEDIUM | `validate.py:28`, `validate.py:33`, `run_tests.py:77`, `tests/test_runner.py:106`, `run_private_tests.bat:15` | Gate mặc định chỉ chạy bộ scenario mặc định; không chạy 35 private và 38 detailed case. PT32 có expectation không khớp source nhưng không bị gate mặc định bắt. | 2 — kiểm thử | Chạy tất cả case suites với tên suite riêng, fixture và report rõ ràng; gate phải fail khi case bắt buộc sai. |
-| F21 | MEDIUM | `frontend/scripts/check-chat.cjs:33`, `frontend/scripts/check-chat.cjs:37`, `tests/test_database.py:49`, `tests/test_database.py:53` | Test TS load các hàm server nhưng không kiểm thử ChatClient/restore/abort; test parity hiện tại là Python JSON với Python SQLite, không phải Python với TS. Các mâu thuẫn context/routing không có gate chung. | 1 — kiểm thử | Thêm contract tests dùng chung và test UI Next.js cho lịch sử lỗi, đổi context, request bị hủy. |
-| F22 | MEDIUM | `frontend/src/components/ConversationSidebar.tsx:30`, `frontend/src/components/ConversationSidebar.tsx:34`, `frontend/src/lib/supabase.ts:35`, `frontend/src/lib/policy.server.ts:2` | UI gọi trạng thái là “Nguồn dữ liệu: Supabase Live”, trong khi answer đọc JSON. `tableCount` chỉ là số dòng query giới hạn 10, không phải tổng personas. | 2 — naming | Đổi nhãn thành kiểm tra kết nối; hiển thị riêng nguồn chính sách đang dùng; bỏ hoặc tính count đúng nghĩa. |
-| F15 | LOW | `run_frontend.bat:22`, `run_app.bat:28`, `frontend/package.json:13`, `frontend/package-lock.json:4` | Launcher dùng `npm install` với semver ranges dù có lockfile. Khi manifest/lock lệch, cài đặt có thể cập nhật lock thay vì fail như `npm ci`. Không khẳng định mọi lần install đều đổi version. | 1 — reproducibility | Dùng `npm ci` và báo lỗi khi lock không khớp. |
-| F16 | LOW | `frontend/src/lib/gemini.server.ts:9`, `frontend/src/lib/gemini.server.ts:28`, `frontend/scripts/check-chat.cjs:65`, `frontend/scripts/check-chat.cjs:77` | Model mặc định và adapter live **[không xác minh được]** từ source: test dùng fake key và response model tự tạo. Request/response không có hợp đồng replay theo model version trong bộ kiểm thử. Trừ vì thiếu bằng chứng, không kết luận model mặc định không tồn tại. | 1 — reproducibility | Có smoke/evaluation riêng dùng model hợp lệ, record cấu hình/provider metadata đã sanitize; giữ mock tests cho unit test. |
-| F18 | LOW | `engine/storage.py:82`, `engine/storage.py:88`, `app.py:23`, `engine/core.py:46` | `read_dataset` đã compile/validate snapshot nhưng trả raw; caller lại validate/compile. Cache ở Streamlit không bỏ bước validate nằm trong `runtime_data_bytes()` mỗi rerun. | 1 — hiệu năng | Trả hoặc reuse snapshot đã validate; chỉ recompile khi fingerprint thay đổi, vẫn phát hiện direct SQL edit. |
-| F23 | LOW | `engine/graph_view.py:28`, `engine/graph_view.py:35`, `frontend/src/components/ConversationSidebar.tsx:27`, `public/styles.css:1` | JS/JSX/CSS có dòng nén rất dài; template graph dùng nhiều tên một ký tự như a/b/g/p. Review lỗi nhánh và diff khó hơn, không phải bằng chứng thuật toán sai. | 1 — readability | Format source, đặt tên theo vai trò và tách template/render helpers. |
-| F24 | LOW | `scripts/export_sqlite_to_supabase.py:1`, `scripts/export_sqlite_to_supabase.py:103`, `scripts/export_sqlite_to_supabase.py:107`, `scripts/export_sqlite_to_supabase.py:108` | Docstring nói “verify migration”, nhưng chương trình chỉ tạo SQL rồi in OK; không thực thi/import/read-back PostgreSQL hay so sánh nội dung đích. | 1 — naming | Đổi mô tả đúng phạm vi export hoặc thêm bước verification riêng có bằng chứng. |
+|---|---|---|---|---:|---|
+| R01 | CRITICAL | `frontend/src/lib/intent.server.ts:41`, `frontend/src/lib/intent.server.ts:43`; `frontend/src/components/ChatClient.tsx:100` | Khi snapshot đổi, context reset nhưng lịch sử không replay vì `previous` vẫn tồn tại. Ngày user chọn trong hội thoại bị thay bằng ngày khởi tạo chat; có thể trả phiên bản chính sách khác mà không hỏi lại. | 3 logic | Replay history khi context không tương thích snapshot; giữ ngày đã xác định hoặc hỏi lại. Regression snapshot đổi + follow-up. |
+| R04 | CRITICAL | `engine/provenance.py:58`, `engine/provenance.py:63`, `engine/provenance.py:68`, `engine/provenance.py:75` | Pointer có thể trỏ clause khác cùng policy/version, còn `source.line` trỏ key cũ. Các kiểm tra tách rời không bind pointer/key/line thành một clause; có thể chứng nhận nguồn sai slot. | 3 dữ liệu | Bind pointer terminal với key và vị trí dòng của đối tượng được trỏ; negative control cùng document khác key. |
+| R02 | HIGH | `engine/semantic_matcher.py:31`; `frontend/src/lib/intent.server.ts:58` | Year-only guard chỉ nhận `20xx`; năm 1999/2100 bị bỏ qua, câu hỏi được xử lý theo ngày mặc định. | 2 logic | Nhận năm bốn chữ số trong ngữ cảnh thời gian; áp dụng clarification khi chưa đủ ngày. |
+| R03 | HIGH | `engine/metadata.py:79`, `engine/tabular.py:88`, `engine/generator.py:19`; `frontend/src/lib/policy-resolution.server.ts:63` | Enum đã sửa có thể hợp lệ nhưng answer vẫn dùng `text_source` cũ; structured claim và câu trả lời mâu thuẫn. | 2 logic | Mapping enum → mô tả hoặc validate cặp enum/text; test thay approver qua SQL/CSV. |
+| R05 | MEDIUM | `engine/semantic_matcher.py:91`, `engine/semantic_matcher.py:129`; `frontend/src/lib/intent.server.ts:25`, `frontend/src/lib/intent.server.ts:59` | Hai engine chia sẻ taxonomy nhưng khác quy tắc history/version và ưu tiên ngày; cùng hội thoại có thể khác status/ngày/fact. | 2 kiến trúc | Contract chuyển trạng thái/temporal; golden cases history + version, current-date + exact-date ở cả hai engine. |
+| R06 | MEDIUM | `engine/semantic_matcher.py:85`; `frontend/src/lib/intent.server.ts:23`, `frontend/src/lib/intent.server.ts:60` | Có notice_period thì luôn bỏ entitlement, kể cả user hỏi rõ cả hai; trả lời thiếu một phần câu hỏi. | 2 logic | Chỉ loại match entitlement giả do cụm báo trước, giữ yêu cầu entitlement độc lập; test exact claim set nhiều slot. |
+| R07 | MEDIUM | `frontend/src/components/ChatClient.tsx:106`; `frontend/src/components/ChatArea.tsx:237`; `frontend/src/lib/chat-handler.server.ts:51` | Provider của một reply ghi đè trạng thái cấu hình; footer có thể nói “chưa bật Gemini” nhưng câu tiếp theo vẫn gửi Google. | 2 dữ liệu | Tách configured/enabled khỏi provider của từng message; thông báo gửi dữ liệu theo cấu hình hiện hành. |
+| R08 | MEDIUM | `frontend/src/components/ChatClient.tsx:90`, `frontend/src/components/ChatClient.tsx:101`; `frontend/src/lib/request-body.server.ts:1` | Client nhận 4.000 ký tự và 20 lượt history nhưng server chỉ nhận 100.000 byte; history hợp lệ từng field có thể khiến câu tiếp theo bị 413. | 1 kiến trúc | Budget UTF-8 toàn payload; giới hạn history theo byte, ưu tiên context; đồng bộ client/server. |
+| R09 | MEDIUM | `schemas/knowledge_runtime_v2.schema.json:363`; `engine/tabular.py:70`; `frontend/src/lib/intent.server.ts:13` | Schema/matcher cho phép thiếu query_aliases, nhưng chuyển JSON thành bảng `pop` không default và phát sinh KeyError. | 1 dữ liệu | Canonicalize thiếu thành [] hoặc bắt buộc field trong schema; test round-trip optional field. |
+| R10 | MEDIUM | `supabase/verify_access.sql:25`, `supabase/verify_access.sql:29`; `frontend/scripts/check-supabase.cjs:48` | `IF NOT (...)` không reject giá trị NULL; view thiếu reloptions hoặc function thiếu proconfig có thể lọt kiểm tra an toàn. | 2 kiểm thử | `IS DISTINCT FROM TRUE`/COALESCE false; negative tests bỏ security_invoker/fixed search_path. |
+| R15 | MEDIUM | `frontend/src/lib/policy-resolution.server.ts:90`; `frontend/src/components/InspectorDrawer.tsx:115` | Citation gán text đã render vào text_source rồi UI đặt trong dấu ngoặc kép như nguyên văn nguồn. | 1 dữ liệu | Tách raw source text và effective/rendered text; inspector đặt tên/hiển thị đúng loại. |
+| R16 | MEDIUM | `frontend/src/lib/policy-resolution.server.ts:81`; `frontend/scripts/check-chat.cjs:19`; `tests/test_engine.py:81` | TypeScript default gates không có entitlement dưới floor; regression 10 → 12 hiện chỉ bảo vệ Python. | 1 kiểm thử | Inject snapshot A=10 vào TS, đòi Group=12 và source đúng; test incompatible units và scope order. |
+| R17 | MEDIUM | `frontend/src/lib/chat-validation.ts:41`, `frontend/src/lib/chat-validation.ts:44`; `frontend/src/lib/intent.server.ts:36` | Type guard dùng String/property coercion: mảng ["assistant"] hoặc key ["entitlement"] có thể pass nhưng không đúng type string. | 1 kiến trúc | Kiểm tra typeof string trước enum/key membership; negative tests array/object. |
+| R11 | LOW | `tests/test_runner.py:121`, `tests/test_runner.py:122`, `tests/test_runner.py:128` | Test “clean environment install” dùng virtualenv đã có và pip check; không tạo môi trường sạch hay thử cài lock từ đầu. | 1 reproducibility | Đổi tên đúng phạm vi; thêm fresh-environment provisioning gate trong tác vụ được phép chạy. |
+| R12 | LOW | `engine/storage.py:82`, `engine/storage.py:89` | Lấy runtime bytes SQLite serialize canonical JSON hai lần; cache validation không loại serialization thứ hai. | 1 hiệu năng | Reuse canonical bytes đã validate từ một lần đọc; giữ direct-SQL invalidation. |
+| R13 | LOW | `frontend/src/lib/gemini.server.ts:19`, `frontend/src/lib/gemini.server.ts:32`, `frontend/src/lib/gemini.server.ts:37` | External model chỉ chọn hai style server render sẵn; thêm network/token cost cho phần xử lý rất nhỏ. | 1 hiệu năng | Style local hoặc chứng minh lợi ích đo được trước khi giữ model call. |
+| R14 | LOW | `frontend/src/components/ChatArea.tsx:21`; `frontend/src/components/InspectorDrawer.tsx:16`; `engine/provenance.py:29`; `public/styles.css:1` | Component lớn; verifier gom nhiều tầng kiểm tra trong 61 dòng; legacy CSS minify một dòng khó review. | 2: 1 kiến trúc + 1 readability | Tách message/input/citation panel và các bước verifier; format CSS/inline script do repo sở hữu. |
 
-### Phản ví dụ quan trọng từ truy vết source
-
-- **F01:** nếu upstream trả text “Bạn có 99 ngày phép năm.”, finishReason STOP và dưới 12.000 ký tự, adapter nhận text này. POST gán text vào answer; citation vẫn đến từ facts 14 ngày. Đây là phản ví dụ với một response giả định, **không phải** khẳng định Gemini live đã trả 99 ngày: `frontend/src/lib/gemini.server.ts:33`, `frontend/src/lib/chat-handler.server.ts:39`, `frontend/src/lib/policy.server.ts:146`, `supabase/seed.sql:55`.
-- **F02:** với Lan, ngày `2026-10-14`, query `2+2 bằng bao nhiêu?` không trúng blacklist out-of-scope, không có slot, nên nhánh chọn tất cả facts. Query “Quy định nghỉ phép, sếp nào duyệt trước khi liên hệ phòng Nhân sự?” lại bị alias HR đưa sang refusal, dù Python có regression yêu cầu answered cho đúng câu này: `frontend/src/lib/policy.server.ts:89`, `frontend/src/lib/policy.server.ts:136`, `frontend/src/lib/policy.server.ts:144`, `tests/test_engine.py:318`.
-- **F03:** Hùng hỏi đích `POL-B-LV` thì notice là 5 business_days; follow-up “Báo trước bao lâu?” không giữ target từ history và chọn policy Team 10 unspecified_days. Với history có `2026-01-15`, sau lượt “hiện tại” thì lượt tiếp không có ngày ISO vẫn có thể lấy lại mốc cũ: `frontend/src/lib/policy.server.ts:80`, `frontend/src/lib/policy.server.ts:85`, `frontend/src/lib/policy.server.ts:94`, `supabase/seed.sql:59`, `supabase/seed.sql:63`.
-- **F04:** “Nghỉ phép năm 2026 bao nhiêu ngày?” ở Python được resolve thành `2026-01-01`; fixture cùng năm đổi từ v1 12 ngày sang v2 14 ngày từ 01/03, nên không thể coi answer đầu năm là answer cho toàn năm: `engine/semantic_matcher.py:38`, `supabase/seed.sql:42`, `supabase/seed.sql:43`, `supabase/seed.sql:53`, `supabase/seed.sql:55`.
-- **F05:** normalize PT32 cho text “che do phep nghi thuong nien cua toi?”; không trúng các topic ở dòng 65–66, nên trả out_of_scope trước khi xét entitlement. Expectation fixture là answered/14 ngày: `engine/semantic_matcher.py:18`, `engine/semantic_matcher.py:65`, `engine/semantic_matcher.py:67`, `tests/private_test_cases.json:607`, `tests/private_test_cases.json:617`.
-
-### Checklist bắt buộc
-
-| Mục | Kết quả | Bằng chứng và giới hạn |
-| --- | --- | --- |
-| Fit scaler/encoder/imputer trước split | Không áp dụng | Các engine là routing/lọc clause, không có bước fit estimator: `engine/core.py:98`, `frontend/src/lib/policy.server.ts:99`. |
-| Target encoding không CV | Không áp dụng | Không có target encoding hoặc training target trong luồng; dữ liệu được resolve thành typed claims: `engine/hierarchy.py:28`, `engine/generator.py:28`. |
-| Feature chứa thông tin tương lai | Không áp dụng cho ML; có lỗi temporal ở ứng dụng | Không có feature pipeline; chính sách có as-of filtering, nhưng hỏi chỉ có năm bị tự chọn đầu năm ở F04: `engine/timeline.py:13`, `engine/semantic_matcher.py:38`. |
-| Stratify train/val/test | Không áp dụng | Test ở đây là scenario oracle, không phải split dataset huấn luyện: `run_tests.py:77`. |
-| Shuffle time-series sai cách | Không áp dụng | Không có train time-series; version selection dùng khoảng hiệu lực: `engine/timeline.py:18`. |
-| Dùng test set để tune | Không áp dụng cho ML; chưa chứng minh độc lập acceptance | Đây là fixture thủ công; không có pipeline tối ưu hyperparameter. “Private” không chứng minh blind holdout: `tests/test_runner.py:54`, `tests/private_test_cases.json:604`. |
-| Metric phù hợp imbalance | Không áp dụng cho classification ML | Oracle kiểm tra từng expectation, không tính metric classification: `run_tests.py:19`, `run_tests.py:54`. Không dùng pass rate fixture để suy ra accuracy với mọi câu tiếng Việt. |
-| Baseline/dummy/naive | Không áp dụng cho model huấn luyện; thiếu evaluation Gemini live | Có nhánh rule engine fallback, nhưng mock test không so accuracy/grounding giữa model và baseline trên corpus độc lập: `frontend/src/lib/chat-handler.server.ts:33`, `frontend/scripts/check-chat.cjs:77`. |
-| Seed random/numpy/torch/sklearn | Không áp dụng cho core deterministic; Gemini chưa xác minh reproducibility | Clock Python inject được, nhưng request Gemini temperature 0.2 và model được chọn từ env, không phải bằng chứng replay cùng output: `engine/core.py:33`, `tests/test_engine.py:136`, `frontend/src/lib/gemini.server.ts:9`, `frontend/src/lib/gemini.server.ts:28`. UUID là ID, không phải randomness huấn luyện: `frontend/src/lib/conversations.ts:8`. |
-| Hard-coded path | Có lỗi phạm vi launcher ở F14; không phải mọi đường dẫn cố định đều lỗi | Path dataset phần lớn neo theo source root; nhánh chạy cả hai dùng biến chưa set: `engine/snapshot.py:12`, `scripts/export_sqlite_to_supabase.py:6`, `run_app.bat:56`. |
-| Magic number | Có tham số cố định, chưa có bằng chứng mọi hằng số đều sai | Body 100.000 byte, history 20/6, timeout 25.000ms; lỗi cụ thể là body cap đặt sau đọc ở F19. Không trừ chỉ vì có số: `frontend/src/lib/chat-handler.server.ts:23`, `frontend/src/lib/chat-handler.server.ts:29`, `frontend/src/lib/gemini.server.ts:21`, `frontend/src/lib/gemini.server.ts:22`. |
-| Credential/API key lộ trong code | Không tìm thấy trong source đã đọc | Gemini đọc env; template key rỗng; key trong test là fake. Scan các mẫu secret phổ biến không có match, nhưng không phải chứng minh mọi dạng secret đều được phát hiện: `frontend/src/lib/gemini.server.ts:24`, `frontend/.env.example:3`, `frontend/scripts/check-chat.cjs:65`, `.gitignore:6`. Secret local không được đưa vào báo cáo. |
-| Notebook execution_count không tăng, cell chết, output sót, import rải rác | Không áp dụng | Inventory không có `.ipynb`; các entrypoint đọc được là script/module: `app.py:39`, `frontend/src/app/page.tsx:3`, `run_tests.py:109`. |
-| Copy-paste | Có lỗi kiến trúc F10 | Hai implementation cùng xử lý quyền/version/floor và persona riêng: `engine/core.py:53`, `engine/hierarchy.py:28`, `frontend/src/lib/policy.server.ts:99`, `frontend/src/lib/mockData.ts:3`. |
-| Hàm >50 dòng | Có — F11 | policyAnswer 68–163; ChatArea 21–242; InspectorDrawer 16–206. Bằng chứng entrypoint/end của hàm: `frontend/src/lib/policy.server.ts:68`, `frontend/src/lib/policy.server.ts:163`, `frontend/src/components/ChatArea.tsx:21`, `frontend/src/components/InspectorDrawer.tsx:16`. |
-| Nesting >3 tầng | Có | Vòng for bảng → with file → for row → try, rồi comprehension parse row: `engine/tabular.py:150`, `engine/tabular.py:152`, `engine/tabular.py:157`, `engine/tabular.py:158`. Không thêm điểm trừ ngoài F11/F23. |
-| Biến một ký tự | Có — F23 | Graph renderer dùng a/b/g/p và helper `$`: `engine/graph_view.py:23`, `engine/graph_view.py:35`, `engine/graph_view.py:36`. |
-| Silent failure/except trống | Có — F12 | Bootstrap `.catch(() => {})`; generic server catch không lưu diagnostic code: `frontend/src/components/ChatClient.tsx:41`, `frontend/src/lib/chat-handler.server.ts:50`. Rollback rồi re-raise là xử lý đúng, không phải nuốt lỗi: `engine/storage.py:128`. |
-| fillna/drop hàng loạt không giải thích | Không áp dụng cho DataFrame | Không có preprocessing DataFrame; restore history có filter loại bản ghi mà chưa có diagnostic theo record: `frontend/src/lib/conversations.ts:14`. Hợp đồng import thay trọn dataset được khai báo và bao transaction: `engine/storage.py:107`, `engine/storage.py:120`. |
-| Python loop trên DataFrame/apply thay vectorize | Không áp dụng | Core dùng record/SQL/JSON, không có DataFrame pipeline. Bottleneck thật là quét record lặp ở F17: `engine/tabular.py:101`, `engine/tabular.py:112`. |
-| Đọc/validate data nhiều lần | Có — F18 | read_dataset compile rồi caller compile lại; Streamlit vẫn gọi reader trước cache: `engine/storage.py:82`, `app.py:23`, `engine/core.py:46`. |
-| Over-claim từ số liệu/nhãn | Có — F22/F24 | Supabase Live không phải nguồn answer; exporter “verify migration” chưa có read-back: `frontend/src/components/ConversationSidebar.tsx:34`, `frontend/src/lib/policy.server.ts:2`, `scripts/export_sqlite_to_supabase.py:1`, `scripts/export_sqlite_to_supabase.py:107`. Benchmark tự ghi rõ warm snapshot, nên không chấm nó như claim latency end-to-end: `benchmark.py:64`. |
-| Requirements/env, pin version | Có cấu hình; tồn tại lỗi đường cài F15 | Python direct deps và closure pin/hash; npm có lockfile. Semver range không tự là lỗi khi dùng lock đúng: `requirements.txt:1`, `requirements-dev.txt:2`, `requirements.lock:2`, `frontend/package-lock.json:4`, `frontend/package-lock.json:32`. Launcher dùng install thay ci: `run_frontend.bat:22`. |
+Tổng 17 finding: 2 CRITICAL, 2 HIGH, 9 MEDIUM, 4 LOW. R14 là finding duy nhất chia khoản trừ giữa hai hạng mục; tổng vẫn là 2 điểm.
 
 ## 3. ĐÃ TỐT
 
-- Python validate cả JSON Schema và semantic constraints trước compile; kiểm tra organization chain, lifecycle transition, typed unit và identity clause. Có negative tests sửa ACL, ngày, tổ chức và kiểu dữ liệu: `engine/metadata.py:149`, `engine/metadata.py:159`, `engine/metadata.py:160`, `tests/test_engine.py:175`, `tests/test_engine.py:195`, `tests/test_engine.py:210`.
-- Snapshot freeze sâu và giữ một snapshot riêng cho managed request, tránh ghép identity/answer/graph từ hai revision. Có test bất biến và test reload giữa request: `engine/snapshot.py:17`, `engine/core.py:91`, `tests/test_engine.py:271`, `tests/test_engine.py:368`.
-- Floor thay toàn bộ effective clause cùng source, không chỉ sửa số trong answer; provenance/graph theo nguồn floor có test kiểm tra: `engine/hierarchy.py:15`, `engine/hierarchy.py:18`, `tests/test_engine.py:81`, `tests/test_engine.py:91`.
-- Import SQLite validate trước, kiểm tra round-trip, BEGIN IMMEDIATE, backup và rollback khi lỗi. Test failure injection kiểm tra cả dữ liệu và import_log: `engine/storage.py:108`, `engine/storage.py:111`, `engine/storage.py:116`, `engine/storage.py:128`, `tests/test_database.py:122`.
-- Oracle có negative controls: đổi expectation, bỏ citation/claim, thêm dangling edge hoặc node trùng phải bị phát hiện. Đây là kiểm tra độ nhạy của oracle, không chỉ assertion happy path: `tests/test_runner.py:22`, `tests/test_runner.py:36`, `tests/test_runner.py:44`, `tests/test_runner.py:54`.
-- Graph Python được dựng từ projection đã lọc, lọc references phiên bản ẩn, và escape payload ngăn đóng thẻ script; có regression test tương ứng: `engine/knowledge_graph.py:24`, `engine/knowledge_graph.py:27`, `engine/graph_view.py:44`, `tests/test_engine.py:71`, `tests/test_engine.py:361`.
+- Snapshot immutable, cache theo cả bytes dữ liệu/schema; SQLite vẫn đọc mới để nhận direct edits. Tránh dùng chung trạng thái mutable và cache chỉ dựa mtime: `engine/metadata.py:147`, `engine/metadata.py:166`, `engine/snapshot.py:17`, `tests/test_snapshot_cache.py:37`.
+- Floor Python thay cả claim/source, không chỉ sửa số; test đòi source Group, DERIVED_FROM và incompatible-unit conflict: `engine/hierarchy.py:15`, `tests/test_engine.py:91`, `tests/test_engine.py:101`. R16 là khoảng trống xác thực bản TS.
+- Gemini không có quyền viết answer tùy ý: server buộc status/tập fact ID đúng rồi tự render từ facts. Giới hạn quyền model bằng code, vượt mức chỉ dựa prompt: `frontend/src/lib/gemini.server.ts:12`, `frontend/src/lib/gemini.server.ts:15`, `frontend/src/lib/gemini.server.ts:19`.
+- SQLite đọc trong transaction và kiểm tra foreign key; thay dataset có backup/rollback; source test có case input lỗi không hỏng bản cũ: `engine/storage.py:75`, `engine/storage.py:116`, `tests/test_database.py:122`. Không coi test đã pass trong audit này.
+- Oracle dùng expected status/date/value/unit/source, không lấy “hai engine đồng ý” làm chuẩn; negative controls từng trường tránh hợp thức hóa lỗi chung: `contracts.py:44`, `tests/test_contract_oracle.py:11`, `tests/test_contract_oracle.py:23`.
+- Supabase test đổi role trên PostgreSQL engine thử nghiệm, đòi SELECT/ghi trái phép bị từ chối và giữ chat rows; migration revoke cả column grants: `frontend/scripts/check-supabase.cjs:50`, `frontend/scripts/check-supabase.cjs:54`, `frontend/scripts/check-supabase.cjs:64`, `supabase/migrations/20261015_close_public_access.sql:27`. Đây là thiết kế test, không chứng minh quyền instance thật.
+- Graph HTML escape chuỗi để chặn thoát script; có negative test tương ứng: `engine/graph_view.py:43`, `tests/test_engine.py:362`. Không suy ra mọi UI đều đã security-tested từ case này.
 
 ## 4. CHƯA TỐT
 
-- Căn cứ trích dẫn có thể đúng nhưng answer model không khớp căn cứ; giao diện vẫn đặt citation ngay dưới text model, khiến người dùng dễ tin nhầm rằng text đã được kiểm chứng: `frontend/src/lib/chat-handler.server.ts:39`, `frontend/src/components/ChatArea.tsx:143`, `frontend/src/components/ChatArea.tsx:151` — F01.
-- Cùng câu hỏi đi hai engine có thể được answered, refused hoặc needs_clarification khác nhau; khác biệt scope nhắc HR và câu chỉ có năm có nhánh chứng minh được: `tests/test_engine.py:318`, `frontend/src/lib/policy.server.ts:89`, `engine/semantic_matcher.py:38`, `frontend/src/lib/policy.server.ts:86` — F02/F04/F10.
-- History có thể đổi policy/ngày của follow-up mà người dùng chưa yêu cầu đổi: `frontend/src/lib/policy.server.ts:80`, `frontend/src/lib/policy.server.ts:94` — F03.
-- App TS có thể trả kết quả với metadata chưa được phép activate, trong khi Python dùng schema fail-closed: `frontend/src/lib/policy.server.ts:16`, `frontend/src/lib/policy.server.ts:68`, `schemas/knowledge_runtime_v2.schema.json:11`, `engine/metadata.py:149` — F06.
-- Policy database không sử dụng role/scope/owner để lọc row; việc rule engine từ chối không bảo vệ đường đọc SQL/PostgREST có quyền. Không suy ra đã truy cập được live chỉ từ SQL này: `supabase/schema.sql:215`, `supabase/schema.sql:220`, `engine/filter.py:11` — F07.
-- Gate mặc định không kiểm tra requirement đang thất bại tĩnh ở PT32; việc có source test không đồng nghĩa acceptance suite hoàn chỉnh: `validate.py:33`, `tests/private_test_cases.json:607`, `engine/semantic_matcher.py:67` — F05/F20.
-- Restore lịch sử giữ metadata không validate, nên record có content hợp lệ nhưng citations sai kiểu có thể làm render lỗi: `frontend/src/lib/conversations.ts:17`, `frontend/src/components/ChatArea.tsx:154` — F13.
-- Chưa có bằng chứng live cho default model, model accuracy, Supabase grants/RLS thực tế hoặc latency end-to-end. Các kết quả đó **[không xác minh được]**; source hiện chỉ có mock adapter, SQL khai báo và warm benchmark: `frontend/scripts/check-chat.cjs:77`, `supabase/schema.sql:204`, `benchmark.py:64` — F16 và giới hạn F07.
+### Phản ví dụ và hậu quả cụ thể
+
+Các tình huống sau là suy luận tĩnh, **chưa chạy**; không giả định dataset hiện tại đã bị sửa hoặc hệ thống đã bị xâm nhập.
+
+- **R01:** Chat khởi tạo ngày 2026-10-14, user đã hỏi ngày 2026-01-15, context giữ ngày tháng 1/snapshot cũ. Sau khi corpus đổi, câu “Vậy nghỉ phép bao nhiêu ngày?” gửi date khởi tạo và old context. Server reset sang tháng 10 nhưng không replay history vì chỉ replay khi không có previous; chọn phiên bản mới thay vì phiên bản tháng 1. Dữ liệu hai phiên bản: `data/knowledge.json:270`, `data/knowledge.json:363`; nhánh lỗi: `frontend/src/lib/intent.server.ts:41`, `frontend/src/lib/intent.server.ts:43`; payload: `frontend/src/components/ChatClient.tsx:100`.
+- **R04:** Với notice_period A v2, giữ key và line 72, đổi pointer sang `/2/clauses/entitlement`, đồng bộ text_source/value thành text/value 14 của entitlement, đặt unit unspecified_days. Source bytes/hash không đổi; line 72 vẫn mở key notice; policy/version vẫn đúng; verifier suy unit từ text entitlement và trả verified. “14 ngày” được chứng nhận cho báo trước bằng pointer của quyền nghỉ phép. Nguồn thực: `data/documents.json:68`, `data/documents.json:72`; các kiểm tra tách rời: `engine/provenance.py:58`, `engine/provenance.py:63`, `engine/provenance.py:68`, `engine/provenance.py:84`. Test pointer hiện có đổi document, chưa chặn đổi key cùng document: `tests/test_export_provenance.py:39`.
+- **R02:** “Nghỉ phép năm 1999 bao nhiêu ngày?” khớp topic/entitlement nhưng không khớp year-only regex. Engine dùng ngày mặc định thay vì hỏi ngày cụ thể; answer không trả lời thời điểm đã hỏi: `data/intent_rules.json:2`, `data/intent_rules.json:8`, `engine/semantic_matcher.py:31`, `frontend/src/lib/intent.server.ts:58`.
+- **R03:** Sửa value_text approver A v2 thành DepartmentHead nhưng giữ text “Quản lý trực tiếp”. Schema cho enum là string không rỗng, metadata chỉ kiểm tra kind/unit, nên runtime chấp nhận; structured value khác lời trả lời. Đây là lỗ hổng khi update dataset, không khẳng định fixture đang mâu thuẫn: `schemas/knowledge_runtime_v2.schema.json:206`, `engine/metadata.py:79`, `engine/tabular.py:88`, `engine/generator.py:19`, `data/documents.json:77`.
+- **R05:** Sau lượt nhắc POL-A-LV, “v2.0 nghỉ phép bao nhiêu ngày?” bị Python clarification trước khi inherit policy, TS dùng policy đã kế thừa. Với “Hiện tại tôi muốn xem nghỉ phép tại 2026-01-15”, Python ưu tiên today, TS ưu tiên ISO date. Có thể đổi status/phiên bản/fact: `engine/semantic_matcher.py:91`, `engine/semantic_matcher.py:125`, `engine/semantic_matcher.py:129`, `frontend/src/lib/intent.server.ts:25`, `frontend/src/lib/intent.server.ts:59`.
+- **R06:** “Tôi có bao nhiêu ngày phép và phải báo trước bao lâu?” khớp hai slot rồi entitlement bị xóa. User có thời hạn báo trước nhưng thiếu số ngày phép: `data/intent_rules.json:4`, `data/intent_rules.json:8`, `engine/semantic_matcher.py:85`, `frontend/src/lib/intent.server.ts:60`.
+- **R07:** Gemini bật; một lượt không facts hoặc fallback trả provider=rules; client ghi đè state và footer báo “chưa bật Gemini”. Lượt chính sách tiếp vẫn đi Google vì env không đổi. Không có bằng chứng gửi dữ liệu nhân sự thật; finding là thông báo sai trạng thái truyền dữ liệu: `frontend/src/lib/chat-handler.server.ts:51`, `frontend/src/lib/chat-handler.server.ts:53`, `frontend/src/lib/gemini.server.ts:6`, `frontend/src/components/ChatClient.tsx:106`, `frontend/src/components/ChatArea.tsx:237`.
+- **R08:** `"nghỉ phép ".repeat(400)` dài 4.000 ký tự, 5.200 byte UTF-8. Hai mươi lượt đã có 104.000 byte history, chưa tính JSON/câu mới; mỗi field hợp lệ nhưng request tiếp bị 413: `frontend/src/components/ChatClient.tsx:90`, `frontend/src/components/ChatClient.tsx:101`, `frontend/src/lib/chat-handler.server.ts:46`, `frontend/src/lib/request-body.server.ts:17`.
+- **R09:** Bỏ query_aliases khỏi unit vẫn đáp ứng required list, nhưng pop không default gây lỗi; import/export không bao phủ miền input schema: `schemas/knowledge_runtime_v2.schema.json:363`, `engine/tabular.py:70`.
+- **R10:** reloptions/proconfig NULL → ANY(NULL) là NULL → NOT NULL vẫn NULL → PL/pgSQL không vào IF. Assertion có thể bỏ qua cấu hình thiếu. Migration hiện có bảo vệ; lỗi nằm ở verifier/test, không chứng minh instance thật unsafe: `supabase/verify_access.sql:25`, `supabase/verify_access.sql:29`, `supabase/migrations/20261015_close_public_access.sql:33`, `frontend/scripts/check-supabase.cjs:48`.
+- **R15:** Nguồn A v2 viết “Nhân viên chính thức Công ty A được hưởng 14 ngày phép/năm.”; citation UI trích “14 ngày phép năm có hưởng lương.”. Số 14 đúng, nhưng render không phải nguyên văn: `data/documents.json:69`, `frontend/src/lib/policy-resolution.server.ts:64`, `frontend/src/lib/policy-resolution.server.ts:90`, `frontend/src/components/InspectorDrawer.tsx:115`.
+- **R16:** Seed A=14, không dưới floor 12; golden cases dùng seed không chứng minh floor TS sửa 10 thành 12. Bỏ vòng floor có thể vẫn thỏa expectation hiện có. Đây là suy luận coverage, không phải mutation test đã chạy: `frontend/src/lib/policy-resolution.server.ts:81`, `frontend/scripts/check-chat.cjs:19`, `tests/policy_contracts.json:1`; Python có phản ví dụ tại `tests/test_engine.py:81`.
+- **R17:** sender=["assistant"] pass String guard nhưng consumer so sánh strict với string. Context key ["entitlement"] lọt coercion nhưng không match keys.includes(clause.key), có thể lọc mất fact. LocalStorage không bảo đảm đúng type dù validator trả type predicate: `frontend/src/lib/chat-validation.ts:44`, `frontend/src/components/ChatClient.tsx:27`, `frontend/src/lib/chat-validation.ts:41`, `frontend/src/lib/intent.server.ts:36`, `frontend/src/lib/policy-resolution.server.ts:87`.
+- **R11–R14:** Giới hạn còn lại là thiếu bằng chứng clean install, hai lần serialization, external style selection và source khó review; không suy diễn crash/latency chưa đo: `tests/test_runner.py:121`, `engine/storage.py:82`, `engine/storage.py:89`, `frontend/src/lib/gemini.server.ts:32`, `frontend/src/components/ChatArea.tsx:21`, `public/styles.css:1`.
+
+### Checklist bắt buộc
+
+| Mục | Kết luận | Bằng chứng và giới hạn |
+|---|---|---|
+| Data leakage: fit scaler/encoder/imputer trước split; target encoding không CV; future feature | Không áp dụng cho ML | Pipeline resolve policy, không fit estimator/transformer: `engine/core.py:98`, `engine/core.py:107`, `frontend/src/lib/policy.server.ts:22`. R01/R02 là temporal business logic, không gọi training leakage. R07 chấm riêng thông báo gửi dữ liệu. |
+| Train/val/test: stratify, shuffle time-series, tune bằng test | Không áp dụng | Golden cases kiểm tra rule engine, không chia tập huấn luyện: `contracts.py:30`, `tests/test_contract_oracle.py:11`. Không phạt thiếu training split trong bài toán này. |
+| Metric/imbalance và dummy/naive baseline | Không áp dụng cho classification; có baseline hiệu năng | Benchmark đo p50/p95, kiểm tra correctness và có baseline uncached/storage: `benchmark.py:37`, `benchmark.py:48`, `benchmark.py:71`. Số đo thực tế/speedup: [không xác minh được], không chấm theo báo cáo benchmark cũ. |
+| Random seed: random/numpy/torch/sklearn | Không áp dụng cho training | Contract inject clock: `contracts.py:14`; Gemini temperature 0 là cấu hình, không chứng minh dịch vụ deterministic: `frontend/src/lib/gemini.server.ts:42`. Trace UUID không phải training randomness: `frontend/src/lib/chat-handler.server.ts:31`. |
+| Hard-coded path, magic number, credential/API key | Có lỗi ở giới hạn magic number; không thấy key thật trong source đã đọc | R08: 4.000 ký tự/20 turn/100.000 byte không tương thích (`frontend/src/components/ChatClient.tsx:90`, `frontend/src/lib/request-body.server.ts:1`). Dataset ROOT-relative (`engine/snapshot.py:12`); key lấy từ env (`frontend/src/lib/gemini.server.ts:38`), ví dụ để trống (`frontend/.env.example:3`). Không đọc secret local/không đảm bảo phạm vi ngoài source. |
+| Notebook: thứ tự cell, cell chết, output, import | Không áp dụng | Inventory không có ipynb; entrypoint Python/Next.js: `app.py:39`, `frontend/src/app/page.tsx:3`. Không có execution_count để kiểm tra. |
+| Copy-paste, hàm >50 dòng, nesting >3, biến 1 ký tự | Có lỗi | R05 duplicate state logic (`engine/semantic_matcher.py:107`, `frontend/src/lib/intent.server.ts:40`); R14 UI functions lớn (`frontend/src/components/ChatArea.tsx:21`, `frontend/src/components/InspectorDrawer.tsx:16`), verifier 61 dòng/vòng và nhánh lồng (`engine/provenance.py:29`, `engine/provenance.py:71`). Không trừ riêng biến comprehension ngắn có ngữ cảnh rõ. |
+| Silent failure: except trống/pass, fillna/drop vô tội vạ | Có lỗi ở assertion fail-open | R10 im lặng khi NULL (`supabase/verify_access.sql:25`). SQLite rollback rồi raise (`engine/storage.py:128`); Gemini fallback có warning/notice (`frontend/src/lib/chat-handler.server.ts:60`). Logging pass có chú thích tránh log dữ liệu (`api/index.py:93`); KeyboardInterrupt pass là shutdown (`web_preview.py:47`). Không có DataFrame fillna/drop trong pipeline. |
+| Hiệu năng: loop DataFrame, đọc lại data, apply thay map/merge | Có lỗi; DataFrame không áp dụng | R12 serialize lại (`engine/storage.py:82`, `engine/storage.py:89`); R13 external style selection (`frontend/src/lib/gemini.server.ts:32`). SQLite refresh để nhận direct edits không tự động là lỗi (`engine/metadata.py:150`). |
+| Over-claim từ số liệu so với code | Có lỗi về tên test/citation; chưa xác minh số liệu runtime | “clean_environment_install” không fresh-install (R11, `tests/test_runner.py:121`); quote UI không raw quote (R15, `frontend/src/components/InspectorDrawer.tsx:115`). Tên case SSO không chứng minh SSO thật: `tests/test_cases.json:93`, identity là mock (`engine/identity.py:16`). Không chấm claim trong report/slide ngoài scope. |
+| Dependency: requirements/env, pin version | Không thấy lỗi pinning trong phạm vi đọc | Python manifest/lock (`requirements.txt:1`, `requirements-dev.txt:1`, `requirements.lock:1`); NPM lock v3 chốt version (`frontend/package-lock.json:4`, `frontend/package-lock.json:47`). Caret không chứng minh unpinned khi có lock; launcher dùng npm ci (`run_frontend.bat:21`). Clean install/tương thích môi trường khác: [không xác minh được], R11. |
 
 ## 5. ĐÃ TỐI ƯU
 
-- Compile scope regex một lần mỗi snapshot, tái sử dụng qua request; test kiểm tra không gọi compile lại: `engine/semantic_matcher.py:41`, `engine/metadata.py:163`, `tests/test_engine.py:285`.
-- Parse ngày metadata thành date khi compile và sort version selection để không phụ thuộc thứ tự document đầu vào; có permutation test: `engine/metadata.py:138`, `engine/timeline.py:33`, `tests/test_engine.py:168`.
-- API Python cache một assistant của JSON seed cố định, tránh reload/compile mỗi HTTP request ở adapter này: `api/index.py:16`, `api/index.py:19`. Cache này không giải quyết các lần đọc SQLite của Streamlit ở F18.
-- Ghi SQL bằng executemany và bound parameters; có test dữ liệu trông như SQL injection vẫn là dữ liệu: `engine/storage.py:50`, `engine/storage.py:53`, `tests/test_database.py:172`.
-- TS chọn facts trước khi gọi model, cắt history user còn 6 câu và đặt deadline 25 giây cho Gemini. Giảm payload outbound và thời gian chờ model, nhưng không thay output validation ở F01: `frontend/src/lib/policy.server.ts:144`, `frontend/src/lib/gemini.server.ts:21`, `frontend/src/lib/gemini.server.ts:22`.
+- Gom child rows theo document một lần trước khi dựng object, tránh quét toàn bộ child tables cho mỗi document: `engine/tabular.py:126`, `engine/tabular.py:132`. Chưa đo latency, nhưng cấu trúc vòng lặp giảm số lần full scan.
+- LRU giới hạn hai snapshot theo content bytes, reuse validation/compile khi corpus/schema không đổi; giữ refresh SQLite để không che direct edits: `engine/metadata.py:147`, `engine/metadata.py:150`, `tests/test_snapshot_cache.py:37`.
+- Python compile scope regex khi tạo snapshot, không compile lại mỗi câu hỏi; TS scope patterns dựng ở module level: `engine/semantic_matcher.py:41`, `engine/semantic_matcher.py:53`, `frontend/src/lib/intent.server.ts:11`.
+- Dataset TS tạo index object không prototype cho lookup persona/unit; tránh full scan mỗi lookup và inherited property collisions: `frontend/src/lib/dataset.server.ts:21`, `frontend/src/lib/dataset.server.ts:24`.
+- Body reader đếm byte theo chunk/cancel khi quá hạn mức, không đợi đọc toàn body mới reject; có UTF-8 decoder fatal: `frontend/src/lib/request-body.server.ts:9`, `frontend/src/lib/request-body.server.ts:16`, `frontend/src/lib/request-body.server.ts:18`. R08 là tương thích contract client, không phải thiếu giới hạn bộ nhớ server.
 
 ## 6. CHƯA TỐI ƯU
 
-Các ước tính là độ phức tạp từ vòng lặp/luồng dữ liệu, không phải số đo chạy. Không ghi hệ số tăng tốc hoặc latency chưa đo.
-
 | Vị trí | Hiện tại | Nên làm | Lợi ích ước tính |
-| --- | --- | --- | --- |
-| `engine/tabular.py:101`, `engine/tabular.py:112` | Mỗi document quét mọi event/clause/supersedes. | Index/group theo doc_uid một lần. | Phần grouping từ O(D×(E+C+S)) xuống khoảng O(D+E+C+S); sorting giữ chi phí riêng. |
-| `engine/storage.py:82`, `app.py:23` | Validation/compile ở repository rồi lại ở loader. | Reuse validated snapshot theo fingerprint; giữ phát hiện direct SQL edits. | Giảm lần compile/validation trùng; ảnh hưởng latency cụ thể **[không xác minh được]**. |
-| `frontend/src/lib/chat-handler.server.ts:22` | Buffer hết request body rồi mới reject. | Reader có cap và abort khi vượt ngưỡng. | Giới hạn memory do app giữ cho request body; overhead framework cần đo riêng. |
-| `frontend/src/lib/policy.server.ts:31`, `frontend/src/lib/policy.server.ts:89` | find unit và normalize alias lại theo request. | Compile index unit/persona và alias khi load seed đã validate. | Lookup gần O(1) theo ID; tránh normalize lại các alias cố định. Chưa có điểm trừ riêng ngoài các finding đã ghi. |
-| `frontend/src/components/ChatClient.tsx:47`, `frontend/src/components/ChatClient.tsx:61` | Serialize toàn bộ history mỗi lần conversations đổi, không có giới hạn số hội thoại. | Có retention/delete/export và lưu incremental hoặc debounce phù hợp. | Giảm ghi synchronous lớn và rủi ro quota; mức cải thiện cần đo, không cộng thêm điểm trừ. |
-| `engine/knowledge_graph.py:14` | Deduplicate edge bằng membership trong list. | Dùng set khóa `(source,target,relation)` cùng list output. | Tránh kiểm tra tuyến tính theo số edge đã có; graph fixture nhỏ nên chưa trừ điểm riêng. |
+|---|---|---|---|
+| `engine/storage.py:82`, `engine/storage.py:89` — R12 | Serialize canonical JSON để validate rồi serialize lại trả bytes | Reuse canonicalize trong một lần đọc | Bỏ một lượt serialize toàn dataset/request; ms/RAM: [không xác minh được] |
+| `frontend/src/lib/gemini.server.ts:32`, `frontend/src/lib/gemini.server.ts:37` — R13 | External call, timeout 25 giây, chỉ chọn concise/bullets | Style local; đo lợi ích trước khi giữ model | Bỏ một external request cho mỗi câu eligible; latency/token cost: [không xác minh được] |
+| `frontend/src/lib/chat-handler.server.ts:14`, `frontend/src/lib/supabase.ts:19`, `frontend/src/components/ChatClient.tsx:39` | Bootstrap chờ optional health RPC tới timeout 5 giây | Tách probe khỏi dữ liệu cần mở chat/cache probe TTL | Bỏ health probe khỏi critical path; 5 giây là timeout, không phải latency đo được. Đề xuất thêm, không cộng finding/điểm trừ |
+| `frontend/src/components/ChatArea.tsx:107`, `frontend/src/lib/conversations.ts:20` | Render toàn bộ messages hiện có; giới hạn serialization không tự giới hạn state đang render | Paginate/virtualize chat dài, đo trước/sau | Giới hạn số message DOM đang mount; throughput: [không xác minh được]. Đề xuất thêm, không cộng finding/điểm trừ |
 
 ## 7. Top 10 việc cần sửa (xếp theo điểm thu hồi được)
 
-Điểm lấy lại là điểm trực tiếp của finding được liệt kê, không phải cam kết tổng điểm sau khi triển khai. Các việc cùng điểm ưu tiên theo rủi ro correctness/dữ liệu.
-
 | # | Việc | Điểm lấy lại | Công sức (S/M/L) |
-| --- | --- | ---: | --- |
-| 1 | Thực thi role/scope/owner trong RLS; audit view và bảng phụ — F07, `supabase/schema.sql:215`. | 4 | L |
-| 2 | Validate claim/status/source của output Gemini hoặc render quyền lợi bằng facts — F01, `frontend/src/lib/gemini.server.ts:34`. | 4 | L |
-| 3 | Validate seed TypeScript theo runtime/semantic contract trước khi phục vụ — F06, `frontend/src/lib/policy.server.ts:2`. | 3 | M |
-| 4 | Topic gate và scope intent đúng, thêm case HR-contact/out-of-scope — F02, `frontend/src/lib/policy.server.ts:89`. | 3 | M |
-| 5 | Giữ resolved context policy/version/date cho follow-up — F03, `frontend/src/lib/policy.server.ts:80`. | 2 | M |
-| 6 | Export SQLite trong consistent read snapshot; định nghĩa import/upsert — F08, `scripts/export_sqlite_to_supabase.py:76`. | 2 | M |
-| 7 | Sửa cách xử lý câu hỏi chỉ có năm và thống nhất hai engine — F04, `engine/semantic_matcher.py:38`. | 2 | M |
-| 8 | Chạy private/detailed fixtures trong gate chuẩn — F20, `validate.py:33`. Sửa PT32 riêng mới thu hồi thêm điểm F05. | 2 | S |
-| 9 | Khởi tạo interpreter trước menu, kiểm tra init/start và exit code — F14, `run_app.bat:56`. | 2 | S |
-| 10 | Group table rows theo doc_uid trước reconstruction — F17, `engine/tabular.py:101`. | 2 | M |
+|---|---|---:|---|
+| 1 | R01: đổi snapshot phải giữ/replay ngữ cảnh ngày; regression — `frontend/src/lib/intent.server.ts:41` | 3 | M |
+| 2 | R04: bind pointer/key/line cùng clause; negative control — `engine/provenance.py:58` | 3 | M |
+| 3 | R02: year-only guard ngoài 20xx ở cả engine — `engine/semantic_matcher.py:31`, `frontend/src/lib/intent.server.ts:58` | 2 | S |
+| 4 | R03: canonical render enum/kiểm tra text-value — `engine/generator.py:19`, `engine/metadata.py:79` | 2 | M |
+| 5 | R05: contract ưu tiên ngày/history/version — `engine/semantic_matcher.py:129`, `frontend/src/lib/intent.server.ts:25` | 2 | M |
+| 6 | R06: giữ entitlement khi hỏi nhiều slot — `frontend/src/lib/intent.server.ts:60` | 2 | S |
+| 7 | R07: configured provider riêng với used provider — `frontend/src/components/ChatClient.tsx:106`, `frontend/src/components/ChatArea.tsx:237` | 2 | S |
+| 8 | R10: catalog assertion NULL-safe/negative tests — `supabase/verify_access.sql:25` | 2 | S |
+| 9 | R14: tách component/verifier, format legacy source — `frontend/src/components/ChatArea.tsx:21`, `engine/provenance.py:29` | 2 | M |
+| 10 | R08: budget UTF-8 toàn payload/history — `frontend/src/components/ChatClient.tsx:101`, `frontend/src/lib/request-body.server.ts:1` | 1 | M |
+
+Điểm lấy lại là khoản trừ trực tiếp ở mục 1, không tính hai lần việc bỏ trần. Phải sửa cả hai CRITICAL mới bỏ trần 65; còn một CRITICAL thì trần vẫn áp dụng. Trong nhóm đồng điểm, ưu tiên ảnh hưởng đến answer/nguồn trước; không dựa benchmark chưa đo.
 
 ## 8. Phán quyết
 
-**57/100: có lỗi nghiêm trọng về độ tin cậy của kết quả**, rõ nhất là model answer không được đối chiếu lại với citation và câu hỏi thiếu intent có thể nhận facts không liên quan: `frontend/src/lib/chat-handler.server.ts:39`, `frontend/src/lib/policy.server.ts:144`. Backend Python có nền validation, snapshot và transaction tốt hơn, nhưng temporal routing và private acceptance còn mâu thuẫn xác định được từ code/fixture: `engine/metadata.py:146`, `engine/storage.py:106`, `engine/semantic_matcher.py:38`, `tests/private_test_cases.json:607`. Nếu nộp ở trạng thái này, rủi ro lớn nhất là lấy việc gate mặc định chạy các case giới hạn làm bằng chứng cho toàn bộ khả năng ngôn ngữ và hai engine, trong khi default gate không chạy private suite: `validate.py:33`, `frontend/scripts/check-chat.cjs:41`. Nếu dùng với dữ liệu nội bộ thật, phải giải quyết đường RLS không ràng buộc role/owner trước; audit này không xác nhận quyền live hoặc bất kỳ cam kết production nào: `supabase/schema.sql:215`, `supabase/schema.sql:220`.
+Điểm audit tĩnh là **65/100**, nằm trong dải “có sai sót phương pháp hoặc nợ kỹ thuật rõ rệt”; chưa chứng minh runtime hoạt động ở revision này vì không chạy test theo yêu cầu chỉ đọc. Nếu nộp hoặc ship hiện trạng, rủi ro lớn nhất là trả con số của sai thời điểm khi snapshot đổi và gắn nhãn verified cho sai điều khoản nguồn (`frontend/src/lib/intent.server.ts:41`, `engine/provenance.py:58`). Immutable snapshot, floor và oracle đã có cơ sở trong source, nhưng không bù hai lỗ hổng temporal context/provenance (`engine/metadata.py:147`, `tests/test_engine.py:91`, `tests/test_contract_oracle.py:11`). Cần sửa R01/R04 và bổ sung negative controls trước khi tin citation hoặc coi contract giữa hai engine ổn định (`tests/test_export_provenance.py:39`, `engine/semantic_matcher.py:91`, `frontend/src/lib/intent.server.ts:59`).

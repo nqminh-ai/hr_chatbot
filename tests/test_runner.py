@@ -112,6 +112,8 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(first, second)
 
     def test_locked_environment_matches_installed(self):
+        if sys.platform != "win32":
+            self.skipTest("requirements.lock is the verified Windows/CPython 3.14.5 lock")
         for line in (ROOT / "requirements.lock").read_text().splitlines():
             if not line or line.startswith("#"):
                 continue

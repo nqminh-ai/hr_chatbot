@@ -11,8 +11,8 @@ BEGIN;
 CREATE TABLE dataset_info (
     singleton INT PRIMARY KEY CHECK (singleton = 1),
     schema_version TEXT NOT NULL CHECK (schema_version = '2.0'),
-    artifact_kind TEXT NOT NULL CHECK (artifact_kind = 'mock_runtime'),
-    activation_allowed BOOLEAN NOT NULL DEFAULT TRUE,
+    artifact_kind TEXT NOT NULL CHECK (artifact_kind IN ('mock_runtime', 'policy_runtime')),
+    activation_allowed BOOLEAN NOT NULL DEFAULT FALSE,
     created_on DATE NOT NULL DEFAULT CURRENT_DATE,
     timezone TEXT NOT NULL CHECK (timezone = 'Asia/Ho_Chi_Minh'),
     sample_id TEXT NOT NULL CHECK (length(sample_id) > 0)
@@ -71,7 +71,7 @@ CREATE TABLE documents (
     lifecycle_state TEXT NOT NULL CHECK (lifecycle_state IN ('Draft', 'Approved', 'Superseded', 'Revoked')),
     valid_from DATE NOT NULL,
     valid_to DATE,
-    history_evidence TEXT NOT NULL,
+    history_evidence TEXT NOT NULL CHECK (history_evidence IN ('mock_fixture', 'authoritative_record')),
     classification TEXT NOT NULL CHECK (classification IN ('Public', 'Internal', 'Confidential')),
     allowed_roles JSONB NOT NULL DEFAULT '[]'::jsonb,
     applies_to JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -79,12 +79,12 @@ CREATE TABLE documents (
     deny_on_missing BOOLEAN NOT NULL DEFAULT TRUE,
     owner_id TEXT NOT NULL,
     review_due DATE,
-    review_state TEXT NOT NULL,
+    review_state TEXT NOT NULL CHECK (review_state IN ('needs_owner_review', 'approved')),
     source_path TEXT NOT NULL REFERENCES source_hashes(source_path),
     line_start INT NOT NULL CHECK (line_start > 0),
     line_end INT NOT NULL CHECK (line_end >= line_start),
     source_sha256 TEXT NOT NULL CHECK (length(source_sha256) = 64),
-    source_type TEXT NOT NULL,
+    source_type TEXT NOT NULL CHECK (source_type IN ('mock_json', 'authoritative_json')),
     UNIQUE (policy_id, version),
     CHECK (doc_uid = policy_id || '@' || version),
     CHECK (valid_to IS NULL OR valid_to > valid_from)
@@ -124,7 +124,7 @@ CREATE TABLE lifecycle_events (
     position INT NOT NULL CHECK (position >= 0),
     event TEXT NOT NULL CHECK (event IN ('drafted', 'approved', 'superseded', 'revoked')),
     event_date DATE NOT NULL,
-    evidence_type TEXT NOT NULL,
+    evidence_type TEXT NOT NULL CHECK (evidence_type IN ('mock_fixture', 'authoritative_record')),
     PRIMARY KEY (doc_uid, position)
 );
 
@@ -223,7 +223,7 @@ REVOKE ALL ON TABLE public.policy_inventory FROM PUBLIC, anon, authenticated;
 CREATE OR REPLACE FUNCTION public.knowledge_health()
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = pg_catalog
-AS $health$ SELECT EXISTS (SELECT 1 FROM public.dataset_info WHERE singleton = 1) $health$;
+AS $health$ SELECT EXISTS (SELECT 1 FROM public.dataset_info WHERE singleton = 1 AND activation_allowed) $health$;
 REVOKE ALL ON FUNCTION public.knowledge_health() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.knowledge_health() TO anon, authenticated;
 

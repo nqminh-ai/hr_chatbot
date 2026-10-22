@@ -6,10 +6,13 @@
       "const": "2.0"
     },
     "artifact_kind": {
-      "const": "mock_runtime"
+      "enum": [
+        "mock_runtime",
+        "policy_runtime"
+      ]
     },
     "activation_allowed": {
-      "const": true
+      "type": "boolean"
     },
     "created_on": {
       "type": "string",
@@ -108,8 +111,42 @@
     "personas",
     "documents"
   ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "artifact_kind": {
+            "const": "mock_runtime"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "activation_allowed": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "activation_allowed": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "artifact_kind": {
+            "const": "policy_runtime"
+          }
+        }
+      }
+    }
+  ],
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Appota V2 mock runtime metadata",
+  "title": "Appota V2 governed runtime metadata",
   "$defs": {
     "source_ref": {
       "type": "object",
@@ -508,7 +545,10 @@
                     "format": "date"
                   },
                   "evidence_type": {
-                    "const": "mock_fixture"
+                    "enum": [
+                      "mock_fixture",
+                      "authoritative_record"
+                    ]
                   }
                 },
                 "required": [
@@ -520,7 +560,10 @@
               "minItems": 1
             },
             "history_evidence": {
-              "const": "mock_fixture"
+              "enum": [
+                "mock_fixture",
+                "authoritative_record"
+              ]
             }
           },
           "required": [
@@ -543,6 +586,7 @@
             },
             "allowed_roles": {
               "type": "array",
+              "x-appota-canonical-set": true,
               "items": {
                 "type": "string",
                 "minLength": 1
@@ -551,6 +595,7 @@
             },
             "applies_to": {
               "type": "array",
+              "x-appota-canonical-set": true,
               "items": {
                 "type": "string",
                 "minLength": 1
@@ -560,6 +605,7 @@
             },
             "audience_roles": {
               "type": "array",
+              "x-appota-canonical-set": true,
               "items": {
                 "type": "string",
                 "minLength": 1
@@ -616,7 +662,10 @@
               ]
             },
             "review_state": {
-              "const": "needs_owner_review"
+              "enum": [
+                "needs_owner_review",
+                "approved"
+              ]
             }
           },
           "required": [
@@ -646,7 +695,10 @@
               "pattern": "^[a-f0-9]{64}$"
             },
             "source_type": {
-              "const": "mock_json"
+              "enum": [
+                "mock_json",
+                "authoritative_json"
+              ]
             }
           },
           "required": [

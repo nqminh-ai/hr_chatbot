@@ -1,6 +1,7 @@
 """Fail-closed schema and semantic validation before compiling a mock snapshot."""
 import json
 import math
+import os
 from datetime import date
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
@@ -19,11 +20,55 @@ VALUE_UNITS = {"entitlement": {"annual_paid_days", "not_applicable"},
                "notice_period": {"business_days", "calendar_days", "unspecified_days"}}
 
 
+def demo_mode():
+    explicit = os.environ.get("APPOTA_DEMO_MODE", "").strip().casefold()
+    if explicit == "true":
+        return True
+    if explicit == "false":
+        return False
+    return os.environ.get("APPOTA_ENV", "").strip().casefold() != "production"
+
+
+def validate_governance(raw, allow_inactive_mock):
+    if not raw["activation_allowed"]:
+        if not allow_inactive_mock or raw["artifact_kind"] != "mock_runtime":
+            raise MetadataError("Inactive artifact is allowed only in explicit demo mode")
+        return
+    if raw["artifact_kind"] != "policy_runtime":
+        raise MetadataError("Active artifact must be a policy runtime")
+    for decision in raw["migration_decisions"]:
+        if (decision["status"] != "confirmed" or not str(decision["owner"] or "").strip()
+                or not str(decision["evidence"] or "").strip()):
+            raise MetadataError("Active artifact has an unresolved migration decision")
+    for document in raw["documents"]:
+        if document["governance"]["review_state"] != "approved":
+            raise MetadataError("Active artifact contains an unapproved document")
+        lifecycle = document["lifecycle"]
+        if (lifecycle["history_evidence"] != "authoritative_record"
+                or any(event["evidence_type"] != "authoritative_record" for event in lifecycle["events"])):
+            raise MetadataError("Active artifact contains mock lifecycle evidence")
+        if document["provenance"]["source_type"] != "authoritative_json":
+            raise MetadataError("Active artifact contains a mock source")
+
+
 def unique_index(records, key):
     index = {item[key]: item for item in records}
     if len(index) != len(records):
         raise MetadataError(f"Duplicate {key}")
     return index
+
+
+def canonicalize_access_sets(raw, schema):
+    """Compile set-like access arrays into one deterministic representation."""
+    properties = schema["$defs"]["document"]["properties"]["access"]["properties"]
+    fields = tuple(name for name, definition in properties.items()
+                   if definition.get("x-appota-canonical-set") is True)
+    if not fields:
+        raise MetadataError("Schema does not declare canonical access sets")
+    for document in raw["documents"]:
+        access = document["access"]
+        for field in fields:
+            access[field] = sorted(access[field])
 
 
 def validate_organization(units, personas):
@@ -144,8 +189,8 @@ def compile_document(raw):
     )
 
 
-@lru_cache(maxsize=2)
-def snapshot_from_bytes(data_bytes, schema_bytes):
+@lru_cache(maxsize=4)
+def _snapshot_from_bytes(data_bytes, schema_bytes, allow_inactive_mock):
     # Immutable snapshots can be reused only when BOTH byte sequences match.
     # SQLite is still read on every refresh, so direct SQL edits invalidate this.
     try:
@@ -156,6 +201,8 @@ def snapshot_from_bytes(data_bytes, schema_bytes):
         if errors:
             location = "/".join(str(part) for part in errors[0].absolute_path)
             raise MetadataError(f"Schema violation at {location}: {errors[0].validator}")
+        canonicalize_access_sets(raw, schema)
+        validate_governance(raw, allow_inactive_mock)
         units = unique_index(raw["organization"], "id")
         personas = unique_index(raw["personas"], "user_id")
         if any(key != key.casefold().strip() for key in personas):
@@ -169,8 +216,17 @@ def snapshot_from_bytes(data_bytes, schema_bytes):
         raise MetadataError("Malformed metadata structure") from error
 
 
-def load_snapshot(data_file=DEFAULT_DATA, schema_file=DEFAULT_SCHEMA):
+def snapshot_from_bytes(data_bytes, schema_bytes, allow_inactive_mock=None):
+    allowed = demo_mode() if allow_inactive_mock is None else bool(allow_inactive_mock)
+    return _snapshot_from_bytes(data_bytes, schema_bytes, allowed)
+
+
+snapshot_from_bytes.cache_clear = _snapshot_from_bytes.cache_clear
+snapshot_from_bytes.cache_info = _snapshot_from_bytes.cache_info
+
+
+def load_snapshot(data_file=DEFAULT_DATA, schema_file=DEFAULT_SCHEMA, allow_inactive_mock=None):
     try:
-        return snapshot_from_bytes(Path(data_file).read_bytes(), Path(schema_file).read_bytes())
+        return snapshot_from_bytes(Path(data_file).read_bytes(), Path(schema_file).read_bytes(), allow_inactive_mock)
     except OSError as error:
         raise MetadataError("Cannot read dataset/schema") from error

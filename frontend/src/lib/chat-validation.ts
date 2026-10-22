@@ -38,6 +38,14 @@ function citationAppliesAt(value: unknown, day: string): boolean {
   return record(value) && typeof value.valid_from === 'string' && value.valid_from <= day
     && (value.valid_to === null || (typeof value.valid_to === 'string' && day < value.valid_to));
 }
+function messageCitations(value: Record<string, unknown>): boolean {
+  if (value.citations === undefined) return true;
+  if (!Array.isArray(value.citations) || value.citations.length > 40) return false;
+  if (value.citations.length === 0) return true;
+  const queryDate = value.queryDate;
+  if (value.sender !== 'assistant' || !validDate(queryDate)) return false;
+  return value.citations.every(item => citation(item) && citationAppliesAt(item, queryDate));
+}
 function graph(value: unknown): boolean {
   if (!record(value) || !list(value.nodes, 200, node => record(node) && text(node.id, 200) && text(node.label, 500)
     && ['persona', 'policy', 'clause', 'org', 'action'].includes(String(node.type)) && (node.details === undefined || (record(node.details) && jsonValue(node.details))))) return false;
@@ -55,7 +63,7 @@ export function validMessage(value: unknown): value is ChatMessage {
     && timestamp(value.createdAt) && (value.status === undefined || statuses.includes(String(value.status)))
     && (value.queryDate === undefined || validDate(value.queryDate))
     && (value.provider === undefined || ['rules', 'gemini'].includes(String(value.provider)))
-    && (value.citations === undefined || list(value.citations, 40, citation))
+    && messageCitations(value)
     && (value.graph === undefined || graph(value.graph))
     && (value.trace === undefined || (record(value.trace) && jsonValue(value.trace)));
 }

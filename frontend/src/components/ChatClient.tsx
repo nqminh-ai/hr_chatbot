@@ -9,6 +9,16 @@ import { validPersonas, validReply } from '@/lib/chat-validation';
 import type { SupabaseStatus } from '@/lib/supabase';
 import type { ChatMessage, Citation, Conversation, Persona } from '@/types';
 
+function validSupabaseStatus(value: unknown): value is SupabaseStatus {
+  if (!value || typeof value !== 'object') return false;
+  const status = value as Record<string, unknown>;
+  return typeof status.configured === 'boolean' && typeof status.connected === 'boolean'
+    && (status.ready === undefined || typeof status.ready === 'boolean')
+    && (status.checking === undefined || typeof status.checking === 'boolean')
+    && (status.stale === undefined || typeof status.stale === 'boolean')
+    && (status.error === undefined || ['not_configured', 'invalid_config', 'health_unavailable'].includes(String(status.error)));
+}
+
 export function ChatClient() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState('');
@@ -47,8 +57,18 @@ export function ChatClient() {
       const hydrated = validChats.length ? validChats : [newConversation(data.personas[0].userId)];
       setConversations(hydrated); setActiveId(hydrated[0].id);
       setProvider(data.provider === 'gemini' ? 'gemini' : 'rules');
-      if (data.supabase) {
+      if (validSupabaseStatus(data.supabase)) {
         setSupabaseStatus(data.supabase);
+        if (data.supabase.checking || data.supabase.stale) {
+          fetch('/api/health', { cache: 'no-store', signal: controller.signal }).then(response => {
+            if (!response.ok) throw new Error('Health unavailable');
+            return response.json();
+          }).then(status => {
+            if (!controller.signal.aborted && validSupabaseStatus(status)) setSupabaseStatus(status);
+          }).catch(() => {
+            if (!controller.signal.aborted) setSupabaseStatus({ configured: data.supabase.configured, connected: false, error: 'health_unavailable' });
+          });
+        }
       }
     }).catch(() => {
       if (!controller.signal.aborted) setNotice('Không tải được trạng thái hệ thống. Bạn có thể thử lại sau khi tải lại trang.');

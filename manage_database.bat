@@ -23,9 +23,11 @@ echo [2] Check edited CSV in data\csv
 echo [3] Import data\csv into DB with automatic backup
 echo [4] Export DB to data\exports\latest ^(replace previous export^)
 echo [5] Create a database backup
-echo [6] Exit
-choice /c 123456 /n /m "Select 1-6: "
-if errorlevel 6 exit /b 0
+echo [6] Migrate an older database with automatic backup
+echo [7] Exit
+choice /c 1234567 /n /m "Select 1-7: "
+if errorlevel 7 exit /b 0
+if errorlevel 6 goto :migrate
 if errorlevel 5 goto :backup
 if errorlevel 4 goto :export
 if errorlevel 3 goto :import
@@ -47,6 +49,9 @@ goto :done
 goto :done
 :backup
 "%APPOTA_PYTHON%" -B "%~dp0manage_database.py" backup
+goto :done
+:migrate
+"%APPOTA_PYTHON%" -B "%~dp0manage_database.py" migrate
 :done
 echo.
 echo Exit code: %ERRORLEVEL% ^(0=success, 2=operation failed^)

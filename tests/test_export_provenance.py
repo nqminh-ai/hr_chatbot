@@ -37,7 +37,7 @@ class ExportProvenanceTests(unittest.TestCase):
                 verify_provenance(self.raw, root)
 
     def test_text_pointer_and_path_tampering_rejected(self):
-        for kind in ('text', 'pointer', 'path', 'unit', 'line'):
+        for kind in ('text', 'pointer', 'path', 'unit', 'line', 'line_range'):
             raw = copy.deepcopy(self.raw)
             clause = raw['documents'][2]['clauses'][0]
             if kind == 'text': clause['text_source'] = 'fake'
@@ -45,6 +45,7 @@ class ExportProvenanceTests(unittest.TestCase):
             if kind == 'path': raw['source_sha256']['../outside'] = hashlib.sha256(b'').hexdigest()
             if kind == 'unit': clause['typed_value']['unit'] = 'calendar_days'
             if kind == 'line': clause['source_ref']['line'] += 1
+            if kind == 'line_range': raw['documents'][2]['provenance']['line_end'] += 1
             with self.subTest(kind=kind), self.assertRaises(MetadataError):
                 verify_provenance(raw)
 

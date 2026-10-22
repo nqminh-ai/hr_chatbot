@@ -19,7 +19,7 @@ Tài liệu này đặc tả toàn diện và chi tiết bộ ca kiểm thử (T
 | Mã tài liệu | Phiên bản | Cấp quản lý | Đơn vị áp dụng | Trạng thái | Hiệu lực | Áp dụng cho | Quyền xem (`access_level`) |
 |---|---|---|---|---|---|---|---|
 | `POL-GRP-LV` | v3.0 | Group | GRP | Approved | Từ 2026-01-01 | Official | Internal (Sàn tập đoàn min 12 ngày, báo 2 ngày) |
-| `POL-A-LV` | v1.0 | Company | CTY_A | Superseded | 2024-01-01 → 2026-02-28 | Official | Internal (12 ngày/năm, báo trước 3 ngày) |
+| `POL-A-LV` | v1.0 | Company | CTY_A | Superseded | 2024-01-01 → 2026-03-01 (exclusive) | Official | Internal (12 ngày/năm, báo trước 3 ngày) |
 | `POL-A-LV` | v2.0 | Company | CTY_A | Approved | Từ 2026-03-01 | Official | Internal (14 ngày/năm, báo 3 ngày, LineManager duyệt) |
 | `POL-B-LV` | v1.0 | Company | CTY_B | Approved | Từ 2025-01-01 | Official | Internal (12 ngày/năm, báo 5 ngày, Trưởng PB duyệt) |
 | `GUD-B-ENG-LV` | v1.0 | Department | DEPT_ENG_B | Approved | Từ 2025-01-01 | Official | Internal (Cấm nghỉ tuần release, báo trước 7 ngày) |
@@ -69,8 +69,8 @@ Tài liệu này đặc tả toàn diện và chi tiết bộ ca kiểm thử (T
 
 | Mã TC | Tên ca kiểm thử | Persona | Ngày giả lập | Câu hỏi người dùng | Tiền điều kiện / Đầu vào | Kỳ vọng hệ thống (Oracle) | Đánh giá Pass/Fail |
 |---|---|---|---|---|---|---|---|
-| **TEM-01** | Tra cứu lịch sử trong quá khứ (v1.0 còn hiệu lực) | `lan` | 2026-02-27 | "Quy định nghỉ phép của tôi?" | 2026-02-27 nằm trong dải của v1.0 (trước 2026-02-28) | `status = answered`. `days = 12`, `notice_days = 3`. Nguồn trích dẫn: `POL-A-LV v1.0`. Không lấy v2.0. | Điểm thời gian quá khứ |
-| **TEM-02** | Tra cứu ngày giáp ranh / Khoảng trống hiệu lực (Gap) | `lan` | 2026-02-28 | "Quy định nghỉ phép của tôi?" | v1.0 hết hạn 2026-02-28 (exclusive), v2.0 bắt đầu 2026-03-01 | `status = conflict`. Hệ thống báo xung đột / không có phiên bản duy nhất hợp lệ, không tự đoán. Đồ thị rỗng. | Xử lý khoảng trống |
+| **TEM-01** | Tra cứu lịch sử trong quá khứ (v1.0 còn hiệu lực) | `lan` | 2026-02-27 | "Quy định nghỉ phép của tôi?" | 2026-02-27 nằm trong dải của v1.0 | `status = answered`. `days = 12`, `notice_days = 3`. Nguồn trích dẫn: `POL-A-LV v1.0`. Không lấy v2.0. | Trước biên chuyển giao |
+| **TEM-02** | Tra cứu ngày cuối trước chuyển giao phiên bản | `lan` | 2026-02-28 | "Quy định nghỉ phép của tôi?" | v1.0 có `valid_to=2026-03-01` exclusive | `status = answered`. `days = 12`, `notice_days = 3`. Nguồn trích dẫn: `POL-A-LV v1.0`. | Ngay trước biên chuyển giao |
 | **TEM-03** | Tra cứu ngày đầu tiên của phiên bản mới | `lan` | 2026-03-01 | "Quy định nghỉ phép của tôi?" | v2.0 bắt đầu có hiệu lực từ 2026-03-01 | `status = answered`. `days = 14`, `notice_days = 3`. Nguồn trích dẫn: `POL-A-LV v2.0`. | Điểm chuyển giao |
 | **TEM-04** | Ngày tra cứu nằm trong tương lai (Năm sau 2027) | `lan` | 2026-10-13 | "Năm sau 2027 tôi được nghỉ bao nhiêu ngày?" | Dự thảo 2027 là bản nháp chưa duyệt | `status = answered`. Áp dụng bản Approved gần nhất (`POL-A-LV v2.0` - 14 ngày). Tuyệt đối cấm khẳng định "16 ngày". | Chặn dữ liệu dự thảo |
 | **TEM-05** | Cố tình tra cứu bản cũ đã Superseded tại hiện tại | `lan` | 2026-10-13 | "Chính sách nghỉ phép POL-A-LV v1.0" | Tại 2026-10-13, v1.0 đã là Superseded | `status = refused`. Từ chối trung tính vì phiên bản đã hết hiệu lực. | Chặn bản Superseded |

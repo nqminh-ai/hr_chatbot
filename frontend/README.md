@@ -22,6 +22,8 @@ npm.cmd run build
 npm.cmd run start
 ```
 
+Vì repository chỉ chứa fixture inactive, production build local ở trên cần đặt `APPOTA_DEMO_MODE=true` trong phiên shell hoặc `.env.local`. Không dùng override này khi thay fixture bằng dữ liệu nhân sự thật; artifact thật phải qua governance gate.
+
 ## Biến môi trường
 
 Đặt file `.env.local` ngay trong `frontend/`, cùng cấp với `package.json`. File này được Git bỏ qua. Template nằm tại [.env.example](.env.example).
@@ -34,8 +36,35 @@ npm.cmd run start
 | `NEXT_PUBLIC_SUPABASE_URL` | URL project Supabase, dạng `https://<project-ref>.supabase.co`. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key của project Supabase để kiểm tra kết nối. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Được dự trù trong template nhưng runtime hiện chưa dùng. Chỉ dùng phía server khi triển khai chức năng cần đến. |
+| `APPOTA_DEMO_MODE` | `true` chỉ cho public sample demo. Khi production mà không bật biến này, API fail-closed và yêu cầu trusted identity. |
+| `APPOTA_AUTH_MODE` | Production hiện hỗ trợ `trusted-header`. Giá trị khác hoặc để trống làm API trả `503 auth_not_configured`. |
+| `APPOTA_AUTH_SECRET` | Secret tối thiểu 32 ký tự, chỉ gateway và server biết; dùng ký HMAC identity, không có tiền tố `NEXT_PUBLIC_`. |
+| `APPOTA_RATE_LIMIT_MAX` | Số POST tối đa cho mỗi identity trong một cửa sổ; mặc định 20, giới hạn hợp lệ 1–1000. |
+| `APPOTA_RATE_LIMIT_WINDOW_SECONDS` | Độ dài cửa sổ rate limit; mặc định 60 giây, giới hạn hợp lệ 1–3600. |
 
 Không đặt Gemini API key hoặc service-role key trong biến có tiền tố `NEXT_PUBLIC_`. URL và anon key Supabase không phải thông tin xác thực người dùng; quyền truy cập dữ liệu phụ thuộc vào policy của database.
+
+## Xác thực và quota
+
+Local development mặc định chạy demo nếu `NODE_ENV` không phải production và `APPOTA_DEMO_MODE` không được đặt là `false`. Production mặc định fail-closed. Muốn giữ deployment công khai chỉ với dữ liệu mẫu, phải chủ động đặt `APPOTA_DEMO_MODE=true`; chế độ này cho phép chọn mọi persona mẫu và không được dùng với dữ liệu nhân sự thật.
+
+Production dùng một gateway/SSO proxy tin cậy ở trước Next.js. Gateway phải xóa mọi header `x-appota-*` do client gửi, xác thực người dùng, ánh xạ subject sang `user_id` trong dataset rồi thêm:
+
+| Header | Giá trị |
+| --- | --- |
+| `x-appota-user-id` | User ID chữ thường khớp persona, ví dụ `lan`. |
+| `x-appota-auth-timestamp` | Unix time theo giây; server chấp nhận sai lệch tối đa 60 giây. |
+| `x-appota-auth-signature` | HMAC-SHA256 dạng base64url với `APPOTA_AUTH_SECRET`. |
+
+Chuỗi ký chính xác là `timestamp + "\\n" + userId + "\\n" + HTTP_METHOD + "\\n" + pathname`. Ví dụ pathname của cả GET và POST chat là `/api/chat`. Server kiểm tra chữ ký constant-time, chỉ trả persona đã xác thực và từ chối `personaId` khác identity. Không đưa `APPOTA_AUTH_SECRET` vào browser hoặc cấu hình `NEXT_PUBLIC_*`.
+
+Rate limiter ứng dụng chạy trước khi đọc body hay gọi Gemini, trả `429`, `Retry-After` và các header `X-RateLimit-*`. Bucket production gắn với identity; demo dùng địa chỉ client. Bucket hiện nằm trong từng process để phòng vệ tại chỗ, vì vậy deployment nhiều instance vẫn phải áp distributed quota ở gateway/API edge.
+
+## Governance activation gate
+
+`data/knowledge.json` là mock fixture và luôn có `activation_allowed=false`. Development được phép nạp fixture inactive; production build/runtime chỉ được nạp nó khi chủ động đặt `APPOTA_DEMO_MODE=true`. Cờ này chỉ dành cho demo mẫu, không biến dữ liệu thành production-approved.
+
+Một artifact thật chỉ được active khi đồng thời có `artifact_kind=policy_runtime`, `activation_allowed=true`, mọi migration decision là `confirmed` kèm owner/evidence, mọi document có `review_state=approved`, lifecycle dùng `authoritative_record` và provenance dùng `authoritative_json`. Loader TypeScript và Python đều fail-closed nếu thiếu bất kỳ điều kiện nào. Với Python, đặt `APPOTA_ENV=production` để tắt mặc định demo; `APPOTA_DEMO_MODE=true` là override có chủ ý cho fixture mẫu.
 
 ## Gemini
 
@@ -60,9 +89,13 @@ Supabase hiện phục vụ **kiểm tra kết nối**, chưa thay nguồn chín
 
 Schema mới không tự reset bảng. Corpus, persona và chat đều bật RLS, thu hồi grants của `PUBLIC`, `anon`, `authenticated`; view dùng quyền người gọi. RPC `knowledge_health()` chỉ cho biết dataset có sẵn. Migration giữ dữ liệu và quyền service role; việc áp dụng lên Supabase thật là bước triển khai riêng.
 
-`checkSupabaseConnection()` gọi health RPC với timeout 5 giây và trả mã lỗi trung tính. Sidebar hiển thị **Nguồn trả lời: JSON mẫu** cùng trạng thái kết nối Supabase riêng; không dùng số dòng personas để suy ra nguồn trả lời.
+`checkSupabaseConnection()` chỉ gọi RPC `knowledge_health()`, có một timeout tổng 2 giây và không fallback sang bảng corpus/persona đã được bảo vệ. Kết quả được cache 30 giây trong từng process. GET bootstrap chỉ đọc cache đồng bộ rồi dùng `after()` của Next.js để refresh sau khi response hoàn tất, nên tải chat không chờ Supabase; lần đầu có thể hiển thị **Đang kiểm tra**. Sidebar luôn ghi **Nguồn trả lời: JSON mẫu** tách biệt với trạng thái Supabase. Cache này không chia sẻ giữa các instance serverless.
 
 Schema có sẵn `chat_conversations` và `chat_messages`, nhưng ứng dụng chưa ghi vào hai bảng này. `scripts/export_sqlite_to_supabase.py` ở root chỉ tạo lại file seed từ SQLite local, không tự chạy SQL trên Supabase.
+
+## Telemetry vận hành
+
+Các failure bất ngờ của chat, fallback Gemini và health probe Supabase được ghi dưới dạng một JSON object trên mỗi dòng. Schema chỉ gồm `event`, `requestId`, `stage`, `code`, `errorClass`, `elapsedMs`; stage/code là union cố định và tên lớp lỗi được sanitize. Logger không nhận hoặc ghi error message, request body, câu hỏi/lịch sử, URL, persona hay credential. Response chat/bootstrap/health trả `requestId` để đối chiếu log, nhưng repository chưa cấu hình dịch vụ thu thập log bên ngoài.
 
 ## Deploy Vercel
 
@@ -85,8 +118,9 @@ Trong **Project Settings → Environment Variables**, thêm biến Gemini/Supaba
 
 | Endpoint | Vai trò |
 | --- | --- |
-| `GET /api/chat` | Trả ngày mặc định, trạng thái bật Gemini, personas từ snapshot đã validate, snapshot ID, nguồn JSON và kết nối Supabase. |
-| `POST /api/chat` | Đọc body theo stream, giới hạn 100.000 bytes; trả câu trả lời, trạng thái, nguồn, graph, trace, context, request ID và thông báo fallback nếu có. |
+| `GET /api/chat` | Demo trả các persona mẫu; production chỉ trả persona của identity đã ký, cùng ngày mặc định, provider, snapshot ID, nguồn JSON và trạng thái Supabase. |
+| `GET /api/health` | Trả trạng thái cache/probe của RPC `knowledge_health()`; không đọc bảng corpus và không trả dữ liệu policy/persona. |
+| `POST /api/chat` | Xác thực và rate-limit trước khi đọc body; production tự bind persona theo identity. Body tối đa 100.000 bytes; response có answer, citation, graph, trace, context và request ID. |
 
 Ví dụ request POST:
 
@@ -101,11 +135,21 @@ Ví dụ request POST:
 
 Client gửi lại `context` của response trước để giữ ngày, policy/version và loại điều khoản khi hỏi tiếp. Đề cập “hiện tại” chuyển về ngày hiện tại; câu hỏi chỉ có năm yêu cầu ngày cụ thể.
 
-Lịch sử lưu ở `localStorage` với key `appota-conversations-v2`, envelope `{version: 2, conversations: [...]}`. Có thể đọc v1 cũ sau khi kiểm tra metadata. Hội thoại hỏng bị loại bỏ; graph phải có endpoint hợp lệ, ngày phải tồn tại, dữ liệu có giới hạn kích thước. Không đồng bộ giữa trình duyệt hay thiết bị. Đổi persona hoặc ngày áp dụng mở cuộc trò chuyện mới. Persona selector là bối cảnh mẫu, chưa phải đăng nhập.
+Trong demo, `personaId` chọn bối cảnh mẫu. Trong production có thể bỏ trường này; nếu gửi thì nó phải trùng identity đã ký, nếu không API trả `403 persona_mismatch`.
+
+Lịch sử lưu ở `localStorage` với key `appota-conversations-v2`, envelope `{version: 2, conversations: [...]}`. Có thể đọc v1 cũ sau khi kiểm tra metadata. Hội thoại hỏng bị loại bỏ; graph phải có endpoint hợp lệ, ngày phải tồn tại, và assistant message có citation phải có `queryDate` nằm trong khoảng hiệu lực nửa mở `[valid_from, valid_to)`. Citation hết hạn, chưa hiệu lực hoặc thiếu metadata hiệu lực làm conversation bị loại trước khi render. Dữ liệu có giới hạn kích thước và không đồng bộ giữa trình duyệt hay thiết bị. Đổi persona hoặc ngày áp dụng mở cuộc trò chuyện mới. Persona selector là bối cảnh mẫu, chưa phải đăng nhập.
 
 ## Kiểm tra và xử lý lỗi
 
-Chạy trong `frontend/`:
+Chạy toàn bộ gate trong `frontend/`:
+
+```powershell
+npm.cmd run verify
+```
+
+Lệnh này chạy Python validation với ngưỡng coverage dòng **80%** cho `engine/*.py`, toàn bộ `npm test` (bao gồm provenance), lint và production build. Nó dừng ở lớp đầu tiên thất bại, không gọi dịch vụ thật, và dùng `APPOTA_DEMO_MODE=true` riêng cho build của fixture demo inactive. GitHub Actions chạy đúng lệnh này cho mọi pull request và push lên `main`.
+
+Để chẩn đoán riêng từng lớp:
 
 ```powershell
 npm.cmd test
@@ -113,7 +157,9 @@ npm.cmd run lint
 npm.cmd run build
 ```
 
-`npm test` chạy test dữ liệu, contract, Gemini mock, API, React UI và PostgreSQL nhúng. Test SQL cần Python `.venv` đã cài ở root (hoặc `APPOTA_PYTHON`). Không gọi Gemini/Supabase thật. Smoke test live riêng: `npm.cmd run test:gemini:live`; nó gửi một câu hỏi mẫu, không gửi lịch sử hay dữ liệu nhân sự thật. Kết quả triển khai hiện tại nằm trong [implementation_progress.md](../docs/implementation_progress.md).
+`npm test` và `npm run build` đều chạy `test:provenance`. Kiểm tra này hash byte thật của file nguồn rồi đối chiếu line range, JSON pointer, text, typed value/floor/unit và policy/version; bất kỳ sửa đổi không đồng bộ nào cũng chặn test/build.
+
+`npm test` chạy test dữ liệu, contract, Gemini mock, API, React UI và PostgreSQL nhúng. JSON Schema là nguồn chuẩn khai báo `allowed_roles`, `applies_to`, `audience_roles` như các tập hợp; loader Python và TypeScript cùng canonicalize theo khai báo này. Contract C13 đảo thứ tự role giữa hai version và buộc hai engine trả cùng kết quả. Test telemetry xác nhận correlation/stage/error class/elapsed time và chặn prompt, credential, upstream diagnostics khỏi log. Test SQL cần Python `.venv` đã cài ở root (hoặc `APPOTA_PYTHON`). Không gọi Gemini/Supabase thật. Smoke test live riêng: `npm.cmd run test:gemini:live`; nó gửi một câu hỏi mẫu, không gửi lịch sử hay dữ liệu nhân sự thật. Kết quả triển khai hiện tại nằm trong [implementation_progress.md](../docs/implementation_progress.md).
 
 | Hiện tượng | Kiểm tra |
 | --- | --- |

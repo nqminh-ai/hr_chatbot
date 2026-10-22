@@ -1,12 +1,12 @@
 {
   "schema_version": "2.0",
   "artifact_kind": "mock_runtime",
-  "activation_allowed": true,
+  "activation_allowed": false,
   "created_on": "2026-10-13",
   "timezone": "Asia/Ho_Chi_Minh",
   "sample_id": "mock-runtime-v2",
   "source_sha256": {
-    "data/documents.json": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+    "data/documents.json": "66922105159c2e2e7b5d0bde824f78944b62902579a1edbc4d9ac83f6b650733",
     "data/organization.json": "08348a2e777662e1e7544e043db2ddb8b3c7995a1717995928822ff5076ef88e",
     "data/personas.json": "12cdde6b298d685dc093b12450eb2397f669ab1ceb0a65d47563312bb6b8e4f2"
   },
@@ -14,7 +14,7 @@
     {
       "id": "M01",
       "status": "unresolved",
-      "description": "Đề xuất valid_to exclusive 2026-03-01 cho A v1; owner xác nhận trước migration.",
+      "description": "Đã áp dụng valid_to exclusive 2026-03-01 cho A v1 trong mock fixture; HR_A phải xác nhận trước production migration.",
       "owner": null,
       "evidence": null
     },
@@ -219,7 +219,7 @@
         "source_path": "data/documents.json",
         "line_start": 2,
         "line_end": 27,
-        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "sha256": "66922105159c2e2e7b5d0bde824f78944b62902579a1edbc4d9ac83f6b650733",
         "source_type": "mock_json"
       },
       "supersedes": [],
@@ -279,7 +279,7 @@
       "lifecycle": {
         "state": "Superseded",
         "valid_from": "2024-01-01",
-        "valid_to": "2026-02-28",
+        "valid_to": "2026-03-01",
         "events": [
           {
             "event": "approved",
@@ -288,7 +288,7 @@
           },
           {
             "event": "superseded",
-            "at": "2026-02-28",
+            "at": "2026-03-01",
             "evidence_type": "mock_fixture"
           }
         ],
@@ -312,7 +312,7 @@
         "source_path": "data/documents.json",
         "line_start": 28,
         "line_end": 52,
-        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "sha256": "66922105159c2e2e7b5d0bde824f78944b62902579a1edbc4d9ac83f6b650733",
         "source_type": "mock_json"
       },
       "supersedes": [],
@@ -400,7 +400,7 @@
         "source_path": "data/documents.json",
         "line_start": 53,
         "line_end": 81,
-        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "sha256": "66922105159c2e2e7b5d0bde824f78944b62902579a1edbc4d9ac83f6b650733",
         "source_type": "mock_json"
       },
       "supersedes": [
@@ -510,7 +510,7 @@
         "source_path": "data/documents.json",
         "line_start": 82,
         "line_end": 110,
-        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "sha256": "66922105159c2e2e7b5d0bde824f78944b62902579a1edbc4d9ac83f6b650733",
         "source_type": "mock_json"
       },
       "supersedes": [],
@@ -618,7 +618,7 @@
         "source_path": "data/documents.json",
         "line_start": 111,
         "line_end": 135,
-        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "sha256": "66922105159c2e2e7b5d0bde824f78944b62902579a1edbc4d9ac83f6b650733",
         "source_type": "mock_json"
       },
       "supersedes": [],
@@ -706,7 +706,7 @@
         "source_path": "data/documents.json",
         "line_start": 136,
         "line_end": 160,
-        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "sha256": "66922105159c2e2e7b5d0bde824f78944b62902579a1edbc4d9ac83f6b650733",
         "source_type": "mock_json"
       },
       "supersedes": [],
@@ -798,7 +798,7 @@
         "source_path": "data/documents.json",
         "line_start": 161,
         "line_end": 181,
-        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "sha256": "66922105159c2e2e7b5d0bde824f78944b62902579a1edbc4d9ac83f6b650733",
         "source_type": "mock_json"
       },
       "supersedes": [],
@@ -872,7 +872,7 @@
         "source_path": "data/documents.json",
         "line_start": 182,
         "line_end": 202,
-        "sha256": "15a30693de30220cae171864a6385a842e194139365d92c4ec43b18845dab728",
+        "sha256": "66922105159c2e2e7b5d0bde824f78944b62902579a1edbc4d9ac83f6b650733",
         "source_type": "mock_json"
       },
       "supersedes": [],

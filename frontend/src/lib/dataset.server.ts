@@ -3,6 +3,7 @@ import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import seed from '../../../data/knowledge.json';
 import schema from '../../../schemas/knowledge_runtime_v2.schema.json';
+import { demoMode } from './auth.server';
 
 type RawDataset = typeof seed;
 export type Clause = RawDataset['documents'][number]['clauses'][number];
@@ -13,6 +14,11 @@ const levels = ['Group', 'Company', 'Department', 'Team'];
 const ajv = new Ajv2020({ strict: false, strictNumbers: true, allErrors: false });
 addFormats(ajv);
 const validate = ajv.compile<Dataset>(schema);
+type AccessField = keyof Dataset['documents'][number]['access'];
+const accessProperties = schema.$defs.document.properties.access.properties as Record<string, { 'x-appota-canonical-set'?: boolean }>;
+const accessSetFields = Object.entries(accessProperties)
+  .filter(([, definition]) => definition['x-appota-canonical-set'] === true)
+  .map(([field]) => field as AccessField);
 
 function requireValid(condition: unknown, code: string): asserts condition {
   if (!condition) throw new Error(`Invalid policy metadata: ${code}`);
@@ -88,6 +94,35 @@ function clauses(policy: Policy) {
   }
 }
 
+function governance(data: Dataset, allowInactiveMock: boolean) {
+  if (!data.activation_allowed) {
+    requireValid(allowInactiveMock && data.artifact_kind === 'mock_runtime', 'inactive_artifact');
+    return;
+  }
+  requireValid(data.artifact_kind === 'policy_runtime', 'activation_kind');
+  for (const decision of data.migration_decisions) {
+    const owner: unknown = decision.owner;
+    const evidence: unknown = decision.evidence;
+    requireValid(decision.status === 'confirmed' && typeof owner === 'string' && !!owner.trim()
+      && typeof evidence === 'string' && !!evidence.trim(), 'unresolved_decision');
+  }
+  for (const policy of data.documents) {
+    requireValid(policy.governance.review_state === 'approved', 'document_not_approved');
+    requireValid(policy.lifecycle.history_evidence === 'authoritative_record'
+      && policy.lifecycle.events.every(event => event.evidence_type === 'authoritative_record'), 'mock_lifecycle_evidence');
+    requireValid(policy.provenance.source_type === 'authoritative_json', 'mock_source');
+  }
+}
+
+function canonicalizeAccessSets(data: Dataset) {
+  requireValid(accessSetFields.length > 0, 'canonical_access_sets');
+  for (const policy of data.documents) for (const field of accessSetFields) {
+    const values = policy.access[field];
+    requireValid(Array.isArray(values), 'canonical_access_set_type');
+    values.sort();
+  }
+}
+
 function freeze<T>(value: T): T {
   if (value && typeof value === 'object') {
     for (const item of Object.values(value)) freeze(item);
@@ -96,9 +131,12 @@ function freeze<T>(value: T): T {
   return value;
 }
 
-export function buildSnapshot(raw: unknown) {
+export function buildSnapshot(raw: unknown, options: { allowInactiveMock?: boolean } = {}) {
   requireValid(validate(raw), 'schema');
   const data: Dataset = JSON.parse(JSON.stringify(raw));
+  const sourceJson = JSON.stringify(data);
+  canonicalizeAccessSets(data);
+  governance(data, options.allowInactiveMock === true);
   const { units, profiles } = organization(data);
   const policies = unique(data.documents, policy => policy.doc_uid);
   unique(data.documents.flatMap(policy => policy.clauses), clause => clause.clause_id);
@@ -117,8 +155,8 @@ export function buildSnapshot(raw: unknown) {
         && prior.lifecycle.valid_from < policy.lifecycle.valid_from, 'supersedes');
     }
   }
-  const id = createHash('sha256').update(JSON.stringify(data)).update('\0').update(JSON.stringify(schema)).digest('hex');
+  const id = createHash('sha256').update(sourceJson).update('\0').update(JSON.stringify(schema)).digest('hex');
   return freeze({ data, units, profiles, id });
 }
 
-export const knowledgeSnapshot = buildSnapshot(seed);
+export const knowledgeSnapshot = buildSnapshot(seed, { allowInactiveMock: demoMode() });

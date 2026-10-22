@@ -34,7 +34,7 @@ CSV có UTF-8 BOM để đọc tiếng Việt trên Windows, dấu phẩy phân 
 
 Giữ `doc_uid = policy_id@version`, `clause_id = doc_uid#clause_key`. `position` giữ thứ tự bản ghi/sự kiện. Unlimited dùng `value_kind=unlimited`, cả `value_number` và `value_text` là `\N`; không dùng sentinel 99. Enum dùng `value_text`; number dùng `value_number`.
 
-Import là **thay toàn bộ 9 bảng trong cùng transaction**. Phải gửi đủ 9 CSV và mọi bản ghi cần giữ; không phải import từng dòng hoặc upsert. Các liên kết supersedes, event, clause được kiểm tra cùng bộ dữ liệu. Với seed này, ngày 2026-02-28 vẫn là conflict do khoảng trống hiệu lực đã biết; không tự sửa nó trong bước chuyển database.
+Import là **thay toàn bộ 9 bảng trong cùng transaction**. Phải gửi đủ 9 CSV và mọi bản ghi cần giữ; không phải import từng dòng hoặc upsert. Các liên kết supersedes, event, clause được kiểm tra cùng bộ dữ liệu. Seed mock dùng biên nửa mở liên tục: A v1 có `valid_to=2026-03-01`, ngày 2026-02-28 vẫn dùng v1 và ngày 2026-03-01 dùng v2. M01 vẫn chờ HR_A xác nhận trước production migration.
 
 ## Lệnh PowerShell
 
@@ -42,6 +42,7 @@ Chạy tại thư mục dự án; mọi lệnh dùng `.venv` hiện có, không 
 
 ```powershell
 .\.venv\Scripts\python.exe -B manage_database.py init
+.\.venv\Scripts\python.exe -B manage_database.py migrate
 .\.venv\Scripts\python.exe -B manage_database.py status
 .\.venv\Scripts\python.exe -B manage_database.py check-csv --dir data\csv
 .\.venv\Scripts\python.exe -B manage_database.py import-csv --dir data\csv --actor local-owner
@@ -51,6 +52,8 @@ Chạy tại thư mục dự án; mọi lệnh dùng `.venv` hiện có, không 
 ```
 
 Đổi database bằng tham số global đặt trước subcommand, ví dụ `manage_database.py --db data\experiment.db init`. Export từ CLI từ chối ghi đè file có sẵn trừ khi truyền `--overwrite`. Lệnh quản trị trả exit 0 khi thành công, 2 khi lỗi.
+
+Database schema v1 cũ phải chạy `migrate` trước khi dùng bản code này. Migration tạo backup mới, validate trước, chuyển mock runtime về `activation_allowed=0` rồi nâng `PRAGMA user_version` lên 2; không xóa policy, clause, chat hay import log. Lệnh có thể chạy lại an toàn và sẽ báo `migrated=false` nếu database đã ở v2.
 
 Test database đang chỉnh:
 
@@ -85,7 +88,7 @@ erDiagram
 
 ## SQL, validation và phạm vi
 
-SQLite schema v1 dùng PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK, bảng STRICT, index và view `policy_inventory`. Bộ dữ liệu tái dựng được kiểm tra tiếp bằng JSON Schema và validator nghiệp vụ hiện có: cây tổ chức, approval/revoke, provenance, typed units và floors. Foreign keys được bật trên từng connection; backup dùng API SQLite để sao chép database nhất quán, theo [tài liệu foreign keys](https://www.sqlite.org/foreignkeys.html) và [backup API](https://www.sqlite.org/backup.html).
+SQLite schema v2 dùng PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK, bảng STRICT, index và view `policy_inventory`. Bộ dữ liệu tái dựng được kiểm tra tiếp bằng JSON Schema và validator nghiệp vụ hiện có: governance activation, cây tổ chức, approval/revoke, provenance, typed units và floors. Foreign keys được bật trên từng connection; backup dùng API SQLite để sao chép database nhất quán, theo [tài liệu foreign keys](https://www.sqlite.org/foreignkeys.html) và [backup API](https://www.sqlite.org/backup.html).
 
 Mỗi import hợp lệ tạo backup trước khi thay dữ liệu, rồi ghi `import_log` với timestamp UTC, actor do người chạy khai báo, hash trước/sau và số document/clause. Actor chưa gắn với đăng nhập. Backup thành công nhưng import lỗi có thể để lại file backup; dữ liệu và revision không bị commit một phần.
 

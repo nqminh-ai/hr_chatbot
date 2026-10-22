@@ -269,14 +269,17 @@
   },
   {
     "id": "TEM-02",
-    "name": "Tra cứu ngày giáp ranh / Khoảng trống hiệu lực (Gap)",
-    "category": "Hiệu lực thời gian (Boundary Gap Conflict)",
+    "name": "Tra cứu ngày cuối trước chuyển giao phiên bản",
+    "category": "Hiệu lực thời gian (Boundary)",
     "persona": "lan",
     "date": "2026-02-28",
     "query": "Quy định nghỉ phép của tôi?",
     "expected": {
-      "status": "conflict",
-      "empty_graph": true
+      "status": "answered",
+      "days": 12,
+      "notice_days": 3,
+      "primary_doc": "POL-A-LV v1.0",
+      "graph_closed": true
     }
   },
   {

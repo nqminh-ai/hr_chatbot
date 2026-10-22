@@ -1,4 +1,5 @@
 """Compare both engines against independent shared policy fixtures; no live providers."""
+import copy
 import inspect
 from datetime import date
 import json
@@ -6,7 +7,8 @@ import subprocess
 from pathlib import Path
 
 from engine.core import KnowledgeAssistant
-from engine.snapshot import BusinessClock
+from engine.metadata import snapshot_from_bytes
+from engine.snapshot import BusinessClock, DEFAULT_DATA, DEFAULT_SCHEMA
 
 ROOT = Path(__file__).resolve().parent
 
@@ -40,6 +42,26 @@ def parity_errors(python_result, typescript_result):
     return [] if python_result == typescript_result else ["engine parity differs"]
 
 
+def fixture_snapshot(case, base_data, schema_bytes):
+    fixture = case.get("fixture")
+    if not fixture:
+        return None
+    data = copy.deepcopy(base_data)
+    documents = [doc for doc in data["documents"] if doc["policy_id"] == fixture["policy_id"]]
+    if not documents:
+        raise ValueError("Unknown fixture policy: " + fixture["policy_id"])
+    for document in documents:
+        version = document["version"]
+        if version in fixture.get("audience_roles_by_version", {}):
+            document["access"]["audience_roles"] = fixture["audience_roles_by_version"][version]
+        if version in fixture.get("valid_to_by_version", {}):
+            document["lifecycle"]["valid_to"] = fixture["valid_to_by_version"][version]
+        if version in fixture.get("last_event_at_by_version", {}):
+            document["lifecycle"]["events"][-1]["at"] = fixture["last_event_at_by_version"][version]
+    return snapshot_from_bytes(json.dumps(data, ensure_ascii=False).encode("utf-8"), schema_bytes,
+                               allow_inactive_mock=True)
+
+
 def run_contracts():
     cases = json.loads((ROOT / "tests/policy_contracts.json").read_text(encoding="utf-8"))
     process = subprocess.run(["node", str(ROOT / "frontend/scripts/check-contracts.cjs"), "--json"],
@@ -47,12 +69,16 @@ def run_contracts():
     if process.returncode:
         raise ValueError("TypeScript contract runner failed: " + process.stderr)
     typescript = {item["id"]: item["actual"] for item in json.loads(process.stdout)}
+    base_data = json.loads(DEFAULT_DATA.read_text(encoding="utf-8"))
+    schema_bytes = DEFAULT_SCHEMA.read_bytes()
     assistant = KnowledgeAssistant(clock=ContractClock())
     results = []
     supports_history = "history" in inspect.signature(assistant.answer_query).parameters
     for case in cases:
+        snapshot = fixture_snapshot(case, base_data, schema_bytes)
+        case_assistant = KnowledgeAssistant(snapshot=snapshot, clock=ContractClock()) if snapshot else assistant
         kwargs = {"history": case.get("history", [])} if supports_history else {}
-        actual = canonical_python(assistant.answer_query(case["persona"], case["query"], case["date"], **kwargs))
+        actual = canonical_python(case_assistant.answer_query(case["persona"], case["query"], case["date"], **kwargs))
         ts_actual = typescript[case["id"]]
         errors = ["python: " + error for error in contract_errors(actual, case["expected"])]
         errors += ["typescript: " + error for error in contract_errors(ts_actual, case["expected"])]

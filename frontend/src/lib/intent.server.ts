@@ -8,11 +8,18 @@ export type PolicyContext = { date: string; policyId: string | null; version: st
 export const normalize = (text: string) => text.toLowerCase().replace(/đ/g, 'd').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export const contains = (text: string, phrases: string[]) => phrases.some(phrase => new RegExp(`(?<!\\w)${escape(phrase)}(?!\\w)`).test(text));
-const scopes = knowledgeSnapshot.data.organization.map(unit => {
-  const prefix = '\\b(?:quy dinh|chinh sach|nghi phep|tai lieu)(?: (?:nghi phep|cua|tai|cho))* ';
-  const aliases = (unit.query_aliases || []).map(alias => `${prefix}${escape(normalize(alias))}(?!\\w)`);
-  return { id: unit.id, pattern: new RegExp([`(?<!\\w)${escape(normalize(unit.id))}(?!\\w)`, ...aliases].join('|')) };
-});
+const scopeCache = new WeakMap<object, { id: string; pattern: RegExp }[]>();
+function scopesFor(snapshot: typeof knowledgeSnapshot) {
+  const cached = scopeCache.get(snapshot);
+  if (cached) return cached;
+  const compiled = snapshot.data.organization.map(unit => {
+    const prefix = '\\b(?:quy dinh|chinh sach|nghi phep|tai lieu)(?: (?:nghi phep|cua|tai|cho))* ';
+    const aliases = (unit.query_aliases || []).map(alias => `${prefix}${escape(normalize(alias))}(?!\\w)`);
+    return { id: unit.id, pattern: new RegExp([`(?<!\\w)${escape(normalize(unit.id))}(?!\\w)`, ...aliases].join('|')) };
+  });
+  scopeCache.set(snapshot, compiled);
+  return compiled;
+}
 
 function updateContext(query: string, context: PolicyContext): PolicyContext {
   const text = normalize(query);
@@ -37,9 +44,10 @@ export function validContext(value: unknown): value is PolicyContext {
     && typeof context.snapshotId === 'string';
 }
 
-export function resolveIntent(query: string, day: string, history: HistoryTurn[], previous?: PolicyContext) {
-  let context: PolicyContext = previous?.snapshotId === knowledgeSnapshot.id ? { ...previous }
-    : { date: day, policyId: null, version: null, keys: [], snapshotId: knowledgeSnapshot.id };
+export function resolveIntent(query: string, day: string, history: HistoryTurn[], previous?: PolicyContext,
+  snapshot: typeof knowledgeSnapshot = knowledgeSnapshot) {
+  let context: PolicyContext = previous?.snapshotId === snapshot.id ? { ...previous }
+    : { date: day, policyId: null, version: null, keys: [], snapshotId: snapshot.id };
   if (!previous) for (const turn of history.filter(turn => turn.sender === 'user').slice(-20)) context = updateContext(turn.content, context);
   const text = normalize(query);
   const dates = [...new Set([...query.matchAll(/\b\d{4}-\d{2}-\d{2}\b/g)].map(match => match[0]))];
@@ -60,7 +68,7 @@ export function resolveIntent(query: string, day: string, history: HistoryTurn[]
   const keys = currentKeys.length ? currentKeys.filter(key => key !== 'entitlement' || !currentKeys.includes('notice_period')) : summary ? context.keys : [];
   return { status, text, context, keys, draft,
     restricted: /confidential|tai lieu mat|executive|board|ban giam doc|lanh dao/.test(text),
-    scopeIds: scopes.filter(scope => scope.pattern.test(text)).map(scope => scope.id),
+    scopeIds: scopesFor(snapshot).filter(scope => scope.pattern.test(text)).map(scope => scope.id),
     company: text.match(/\b(?:cong ty|cty) ([ab])\b/)?.[1].toUpperCase(),
     missingBackup: /khong.*(?:ai|nguoi).*(?:truc|thay)|khong co.*backup/.test(text),
   };

@@ -78,6 +78,28 @@ class EngineTests(unittest.TestCase):
         with self.assertRaises(MetadataError):
             snapshot_from_bytes(json.dumps(self.raw).encode(), b'{"type":123}')
 
+    def test_inactive_mock_requires_demo_mode(self):
+        with self.assertRaisesRegex(MetadataError, "Inactive artifact"):
+            snapshot_from_bytes(json.dumps(self.raw).encode(), self.schema, allow_inactive_mock=False)
+
+    def test_only_fully_approved_artifact_can_activate(self):
+        self.raw["artifact_kind"] = "policy_runtime"
+        self.raw["activation_allowed"] = True
+        for decision in self.raw["migration_decisions"]:
+            decision.update(status="confirmed", owner="policy-owner", evidence=f"approval:{decision['id']}")
+        for document in self.raw["documents"]:
+            document["governance"]["review_state"] = "approved"
+            document["lifecycle"]["history_evidence"] = "authoritative_record"
+            for event in document["lifecycle"]["events"]:
+                event["evidence_type"] = "authoritative_record"
+            document["provenance"]["source_type"] = "authoritative_json"
+        snapshot_from_bytes(json.dumps(self.raw).encode(), self.schema, allow_inactive_mock=False)
+        for field, value in (("owner", None), ("evidence", None), ("status", "unresolved")):
+            broken = copy.deepcopy(self.raw)
+            broken["migration_decisions"][0][field] = value
+            with self.assertRaises(MetadataError):
+                snapshot_from_bytes(json.dumps(broken).encode(), self.schema, allow_inactive_mock=False)
+
     def test_floor_10_becomes_12(self):
         clause = self.document()["clauses"][0]
         clause["typed_value"]["value"] = 10
@@ -141,7 +163,7 @@ class EngineTests(unittest.TestCase):
 
     def test_date_boundary_half_open(self):
         self.assertEqual(self.entitlement(self.answer(day="2026-03-01"))["value"], 14)
-        self.assertEqual(self.answer(day="2026-02-28")["status"], "conflict")
+        self.assertEqual(self.entitlement(self.answer(day="2026-02-28"))["value"], 12)
         self.assertEqual(self.entitlement(self.answer(day="2026-02-27"))["value"], 12)
 
     def test_jan_2026_uses_a_v1(self):
@@ -172,6 +194,23 @@ class EngineTests(unittest.TestCase):
         after = self.answer("hung")
         self.assertEqual(before["claims"], after["claims"])
         self.assertEqual(before["answer"], after["answer"])
+
+    def test_access_role_sets_are_canonicalized(self):
+        executive = self.document("POL-A-LV-EXEC", "v1.0")
+        executive["access"]["allowed_roles"] = ["Executive", "Board"]
+        executive["access"]["audience_roles"] = ["Executive", "Board"]
+        compiled = next(doc for doc in self.snapshot().documents if doc.doc_uid == executive["doc_uid"])
+        self.assertEqual(compiled.allowed_roles, ("Board", "Executive"))
+        self.assertEqual(compiled.audience_roles, ("Board", "Executive"))
+
+    def test_reversed_role_order_does_not_hide_version_gap(self):
+        old = self.document("POL-A-LV", "v1.0")
+        current = self.document("POL-A-LV", "v2.0")
+        old["access"]["audience_roles"] = ["Staff", "Manager"]
+        current["access"]["audience_roles"] = ["Manager", "Staff"]
+        old["lifecycle"]["valid_to"] = "2026-02-28"
+        old["lifecycle"]["events"][-1]["at"] = "2026-02-28"
+        self.assertEqual(self.answer(day="2026-02-28")["status"], "conflict")
 
     def test_missing_acl_rejected(self):
         del self.document()["access"]["classification"]

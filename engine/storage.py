@@ -15,7 +15,8 @@ from engine.tabular import TABLES, columns, from_tables, to_tables
 
 DEFAULT_DATABASE = ROOT / "data/appota.db"
 SQL_SCHEMA = ROOT / "database/schema.sql"
-DATABASE_VERSION = 1
+MIGRATION_1_TO_2 = ROOT / "database/migrations/002_governance_activation_gate.sql"
+DATABASE_VERSION = 2
 
 
 def canonical_bytes(raw):
@@ -89,7 +90,7 @@ def runtime_data_bytes(path=DEFAULT_DATABASE):
     return canonical_bytes(read_dataset(path))
 
 
-def backup_database(path=DEFAULT_DATABASE, destination=None):
+def backup_database(path=DEFAULT_DATABASE, destination=None, expected_version=DATABASE_VERSION):
     path = Path(path).resolve()
     destination = Path(destination) if destination else path.parent / "backups" / f"appota-{datetime.now(timezone.utc):%Y%m%dT%H%M%S}-{uuid4().hex[:8]}.db"
     destination = destination.resolve()
@@ -97,10 +98,35 @@ def backup_database(path=DEFAULT_DATABASE, destination=None):
         raise FileExistsError("Backup destination must be a new path, different from the live database")
     destination.parent.mkdir(parents=True, exist_ok=True)
     with closing(connect_database(path, readonly=True)) as source:
-        ensure_version(source)
+        if source.execute("PRAGMA user_version").fetchone()[0] != expected_version:
+            raise MetadataError(f"Cannot back up unexpected SQLite schema version; expected {expected_version}")
         with closing(sqlite3.connect(destination)) as target:
             source.backup(target)
     return destination
+
+
+def migrate_database(path=DEFAULT_DATABASE):
+    """Migrate a v1 database after validating the transformed dataset and creating a backup."""
+    path = Path(path).resolve()
+    with closing(connect_database(path)) as connection:
+        current = connection.execute("PRAGMA user_version").fetchone()[0]
+        if current == DATABASE_VERSION:
+            return {"migrated": False, "database": str(path), "schema_version": current, "backup": None}
+        if current != 1:
+            raise MetadataError(f"No migration path from SQLite schema version {current}")
+        candidate = from_tables(fetch_tables(connection))
+        if candidate["artifact_kind"] == "mock_runtime":
+            candidate["activation_allowed"] = False
+        snapshot_from_bytes(canonical_bytes(candidate), DEFAULT_SCHEMA.read_bytes(), allow_inactive_mock=True)
+    backup = backup_database(path, expected_version=1)
+    try:
+        with closing(connect_database(path)) as connection:
+            connection.executescript(MIGRATION_1_TO_2.read_text(encoding="utf-8"))
+    except Exception:
+        raise
+    raw = read_dataset(path)
+    return {"migrated": True, "database": str(path), "schema_version": DATABASE_VERSION,
+            "dataset_sha256": dataset_sha(raw), "backup": str(backup)}
 
 
 def replace_dataset(path, raw, actor="local-user", operation="import"):

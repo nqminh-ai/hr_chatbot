@@ -14,7 +14,7 @@ from engine.models import MetadataError
 from engine.snapshot import DEFAULT_DATA
 from engine.storage import (
     backup_database, connect_database, database_status, initialize_database,
-    read_dataset, replace_dataset, validate_tables,
+    migrate_database, read_dataset, replace_dataset, validate_tables,
 )
 from engine.tabular import read_csv_tables, to_tables, write_csv_tables
 
@@ -45,6 +45,15 @@ class DatabaseTests(unittest.TestCase):
     def test_seed_roundtrip_preserves_every_metadata_field(self):
         self.assertEqual(read_dataset(self.db), self.raw)
         self.assertEqual(database_status(self.db)["counts"]["clauses"], 16)
+
+    def test_v1_migration_backs_up_and_deactivates_mock(self):
+        self.sql("UPDATE dataset_info SET activation_allowed = 1")
+        self.sql("PRAGMA user_version = 1")
+        result = migrate_database(self.db)
+        self.assertTrue(result["migrated"])
+        self.assertTrue(Path(result["backup"]).exists())
+        self.assertFalse(read_dataset(self.db)["activation_allowed"])
+        self.assertFalse(migrate_database(self.db)["migrated"])
 
     def test_json_and_database_answer_graph_parity(self):
         fixture = KnowledgeAssistant()
@@ -85,7 +94,7 @@ class DatabaseTests(unittest.TestCase):
         path.write_text(original.replace('"singleton"', '"wrong"'), encoding="utf-8-sig")
         with self.assertRaises(MetadataError):
             read_csv_tables(folder)
-        path.write_text(original.replace('"1","2.0","mock_runtime","1"', '"1","2.0","mock_runtime","true"'), encoding="utf-8-sig")
+        path.write_text(original.replace('"1","2.0","mock_runtime","0"', '"1","2.0","mock_runtime","true"'), encoding="utf-8-sig")
         with self.assertRaises(MetadataError):
             read_csv_tables(folder)
 

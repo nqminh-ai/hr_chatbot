@@ -4,17 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/check-provenance.cjs && next build",
     "start": "next start",
     "test:chat": "node scripts/check-chat.cjs",
     "test:contracts": "node scripts/check-contracts.cjs",
     "test:data": "node scripts/check-data.cjs",
+    "test:provenance": "node scripts/check-provenance.cjs",
     "test:gemini": "node scripts/check-gemini.cjs",
     "test:gemini:live": "node scripts/check-gemini-live.cjs",
     "lint": "eslint",
     "test:ui": "vitest run",
     "test:supabase": "node scripts/check-supabase.cjs",
-    "test": "node scripts/check-all.cjs"
+    "test": "node scripts/check-all.cjs",
+    "verify": "node scripts/verify.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

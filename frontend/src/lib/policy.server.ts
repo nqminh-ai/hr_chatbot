@@ -19,30 +19,33 @@ const messages = {
   out_of_scope: 'Hiện mình hỗ trợ chính sách nghỉ phép. Bạn muốn hỏi về ngày phép, báo trước hay phê duyệt?',
 };
 
-export function policyAnswer(personaId: string, query: string, day: string, history: HistoryTurn[] = [], previous?: PolicyContext): PolicyResult {
-  const intent = resolveIntent(query, day, history, previous);
+export function policyAnswer(personaId: string, query: string, day: string, history: HistoryTurn[] = [], previous?: PolicyContext,
+  snapshot: typeof knowledgeSnapshot = knowledgeSnapshot): PolicyResult {
+  const intent = resolveIntent(query, day, history, previous, snapshot);
+  const context = intent.context;
   const result: PolicyResult = { status: 'ok', answer: '', query_date: intent.context.date, citations: [], facts: [],
-    graph: { nodes: [], edges: [] }, context: intent.context,
-    trace: { snapshot_id: knowledgeSnapshot.id, data_kind: 'sample', query_date: intent.context.date } };
+    graph: { nodes: [], edges: [] }, context,
+    trace: { snapshot_id: snapshot.id, data_kind: 'sample', query_date: intent.context.date } };
   const fail = (status: keyof typeof messages) => ({ ...result, status, answer: messages[status] });
-  const profile = knowledgeSnapshot.profiles[personaId];
+  const profile = snapshot.profiles[personaId];
   if (!profile) return fail('refused');
   if (/^(xin chao|chao|hello|hi|hey|alo)[!.? ]*$/.test(intent.text)) return { ...result, answer: 'Chào bạn! Mình có thể giúp tra cứu ngày phép, thời hạn báo trước và người phê duyệt.' };
   if (/^(cam on|thanks|thank you|ok|okay|oke|duoc roi|hieu roi)[!.? ]*$/.test(intent.text)) return { ...result, answer: 'Rất vui vì giúp được bạn. Bạn còn muốn làm rõ điều gì về chính sách nghỉ phép?' };
-  const scopes = scopePath(profile);
+  const scopes = scopePath(profile, snapshot);
   if (intent.draft || intent.scopeIds.some(id => !scopes.includes(id)) || (intent.company && profile.company !== `CTY_${intent.company}`)) return fail('refused');
   if (intent.status !== 'route') return fail(intent.status);
-  const otherPerson = knowledgeSnapshot.data.personas.find(person => person.user_id !== personaId && intent.text.includes(`cua ${normalize(person.name)}`));
+  const otherPerson = snapshot.data.personas.find(person => person.user_id !== personaId && intent.text.includes(`cua ${normalize(person.name)}`));
   if (otherPerson) return fail('needs_clarification');
-  return answerPolicies(result, profile, intent.keys, intent.restricted, intent.missingBackup);
+  return answerPolicies(result, profile, intent.keys, intent.restricted, intent.missingBackup, snapshot);
 }
 
-function answerPolicies(result: PolicyResult, profile: typeof knowledgeSnapshot.data.personas[number], keys: string[], restricted: boolean, missingBackup: boolean): PolicyResult {
+function answerPolicies(result: PolicyResult, profile: typeof knowledgeSnapshot.data.personas[number], keys: string[], restricted: boolean,
+  missingBackup: boolean, snapshot: typeof knowledgeSnapshot): PolicyResult {
   try {
     const { date, policyId, version } = result.context;
-    const documents = selectPolicies(profile, date, policyId, version, restricted);
+    const documents = selectPolicies(profile, date, policyId, version, restricted, snapshot);
     if (!documents.length) return { ...result, status: 'refused', answer: messages.refused };
-    const facts = resolveFacts(documents, profile, keys);
+    const facts = resolveFacts(documents, profile, keys, snapshot);
     if (!facts.length) return { ...result, status: 'insufficient_evidence', answer: messages.insufficient_evidence };
     return { ...result, facts, citations: facts.map(fact => fact.citation), graph: factGraph(facts, profile),
       status: missingBackup ? 'insufficient_evidence' : 'ok',

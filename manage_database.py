@@ -9,7 +9,7 @@ from engine.models import MetadataError
 from engine.snapshot import DEFAULT_DATA, ROOT
 from engine.storage import (
     DEFAULT_DATABASE, backup_database, database_status, initialize_database,
-    read_dataset, replace_dataset, validate_tables,
+    migrate_database, read_dataset, replace_dataset, validate_tables,
 )
 from engine.tabular import read_csv_tables, to_tables, write_csv_tables
 
@@ -22,6 +22,7 @@ def parser():
     init.add_argument("--from-json", type=Path, default=DEFAULT_DATA)
     commands.add_parser("status", help="Validate database and show inventory")
     commands.add_parser("validate", help="Validate SQL relations and runtime business rules")
+    commands.add_parser("migrate", help="Back up and migrate an older SQLite schema")
     for name in ("check-csv", "import-csv", "export-csv"):
         command = commands.add_parser(name)
         command.add_argument("--dir", type=Path, default=ROOT / "data/csv")
@@ -42,6 +43,8 @@ def execute(args):
     if args.command == "validate":
         read_dataset(args.db)
         return {"valid": True, "database": str(args.db.resolve())}
+    if args.command == "migrate":
+        return migrate_database(args.db)
     if args.command in {"check-csv", "import-csv"}:
         raw = validate_tables(read_csv_tables(args.dir))
         if args.command == "check-csv":

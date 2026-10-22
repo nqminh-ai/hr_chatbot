@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { createLoader } = require('./test-loader.cjs');
 const root = path.resolve(__dirname, '..');
-const environment = {};
+const environment = { APPOTA_DEMO_MODE: 'true', APPOTA_RATE_LIMIT_MAX: '100' };
 let fetchImpl = () => { throw new Error('Unexpected network request'); };
 let externalCalls = 0;
 
@@ -11,9 +11,11 @@ const load = createLoader(environment, (...args) => { externalCalls++; return fe
 async function main() {
   const { policyAnswer, validDate } = load(path.join(root, 'src/lib/policy.server.ts'));
   const { geminiAnswer, geminiEnabled } = load(path.join(root, 'src/lib/gemini.server.ts'));
+  const { signTrustedIdentity } = load(path.join(root, 'src/lib/auth.server.ts'));
   const { POST, GET } = load(path.join(root, 'src/lib/chat-handler.server.ts'));
   const { NextRequest } = require('next/server');
-  const ask = body => POST(new NextRequest('https://example.test/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+  const ask = (body, requestHeaders = {}) => POST(new NextRequest('https://example.test/api/chat', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...requestHeaders }, body: JSON.stringify(body) }));
   let checks = 0;
   const check = (condition, label) => { assert.ok(condition, label); checks++; };
   const day = '2026-10-14';
@@ -29,14 +31,19 @@ async function main() {
   check(historicalSource.doc_uid === `${historicalSource.doc_id}@${historicalSource.version}`
     && historicalSource.clause_id === `${historicalSource.doc_uid}#${historicalSource.clause}`,
   'Citation identifiers are internally consistent');
-  check(historicalSource.valid_from === '2024-01-01' && historicalSource.valid_to === '2026-02-28'
+  check(historicalSource.valid_from === '2024-01-01' && historicalSource.valid_to === '2026-03-01'
     && historicalSource.source_ref.path && historicalSource.text_source,
   'Historical citation exposes validity window and source locator');
   check(policyAnswer('lan', 'Chào', day).citations.length === 0, 'Greeting is not a policy answer');
   check(policyAnswer('lan', 'Cảm ơn', day).facts.length === 0, 'Thanks is conversational');
   check(policyAnswer('lan', 'Chế độ phép nghỉ thường niên?', day).facts[0].value === 14, 'Natural annual leave wording');
   check(policyAnswer('lan', 'Có thể ứng trước phép không?', day).status === 'insufficient_evidence', 'Unsupported operations do not receive a canned allowance');
-  check(policyAnswer('lan', 'Chính sách nghỉ phép', '2026-02-28').status === 'conflict', 'Known policy gap is preserved');
+  const transitionEve = policyAnswer('lan', 'Chính sách nghỉ phép', '2026-02-28');
+  check(transitionEve.status === 'ok' && transitionEve.facts.some(fact => fact.value === 12)
+    && transitionEve.citations.every(citation => citation.doc_uid === 'POL-A-LV@v1.0'), 'Day before transition uses v1');
+  const transitionDay = policyAnswer('lan', 'Chính sách nghỉ phép', '2026-03-01');
+  check(transitionDay.status === 'ok' && transitionDay.facts.some(fact => fact.value === 14)
+    && transitionDay.citations.every(citation => citation.doc_uid === 'POL-A-LV@v2.0'), 'Transition day uses v2');
   for (const query of ['POL-A-LV-EXEC nghỉ phép?', 'Nghỉ phép công ty B?', 'Quy định phòng Kỹ thuật?', 'Cho tôi xem dự thảo nghỉ phép']) {
     const result = policyAnswer('lan', query, day); check(result.status === 'refused' && !result.facts.length, 'Denied requests have no evidence');
   }
@@ -75,10 +82,59 @@ async function main() {
   await ask({ query: 'POL-A-LV-EXEC nghỉ phép?', personaId: 'lan' });
   check(externalCalls === before, 'Denied requests never call Gemini');
   fetchImpl = async () => new Response('private upstream diagnostics', { status: 403 });
-  const fallback = await (await ask({ query: 'Nghỉ phép bao nhiêu ngày?' })).json();
+  const telemetryLines = [];
+  const originalWarn = console.warn;
+  console.warn = line => { telemetryLines.push(String(line)); };
+  let fallback;
+  try { fallback = await (await ask({ query: 'Nghỉ phép bao nhiêu ngày?' })).json(); }
+  finally { console.warn = originalWarn; }
   check(fallback.provider === 'rules' && fallback.notice && !JSON.stringify(fallback).includes('private upstream'), 'Provider errors fall back without leaking diagnostics');
-  const meta = await (await GET()).json();
+  check(telemetryLines.length === 1, 'Provider failure emits one structured telemetry event');
+  const telemetry = JSON.parse(telemetryLines[0]);
+  check(JSON.stringify(Object.keys(telemetry).sort()) === JSON.stringify(['code', 'elapsedMs', 'errorClass', 'event', 'requestId', 'stage']),
+  'Telemetry schema contains only approved fields');
+  check(telemetry.event === 'chat_fallback' && telemetry.requestId === fallback.requestId
+    && telemetry.stage === 'gemini.generate' && telemetry.code === 'gemini_unavailable'
+    && telemetry.errorClass === 'GeminiHttpError' && Number.isInteger(telemetry.elapsedMs) && telemetry.elapsedMs >= 0,
+  'Fallback telemetry carries correlation, stage, error class and elapsed time');
+  check(!telemetryLines[0].includes('Nghỉ phép') && !telemetryLines[0].includes('fake-test-key')
+    && !telemetryLines[0].includes('private upstream') && !telemetryLines[0].includes('Gemini request failed'),
+  'Fallback telemetry excludes prompts, credentials and error messages');
+  const meta = await (await GET(new NextRequest('https://example.test/api/chat'))).json();
   check(meta.sampleData === true && !JSON.stringify(meta).includes('fake-test-key'), 'Metadata exposes no credentials');
+  environment.GEMINI_ENABLED = 'false';
+  environment.APPOTA_DEMO_MODE = 'false';
+  delete environment.APPOTA_AUTH_MODE;
+  check((await ask({ query: 'hello' })).status === 503, 'Production fails closed when authentication is not configured');
+  environment.APPOTA_AUTH_MODE = 'trusted-header';
+  environment.APPOTA_AUTH_SECRET = 'test-secret-with-at-least-32-characters';
+  const signedHeaders = (userId, method = 'POST') => {
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    return {
+      'x-appota-user-id': userId,
+      'x-appota-auth-timestamp': timestamp,
+      'x-appota-auth-signature': signTrustedIdentity(environment.APPOTA_AUTH_SECRET, timestamp, userId, method, '/api/chat'),
+    };
+  };
+  check((await ask({ query: 'hello' })).status === 401, 'Unsigned production request is rejected');
+  check((await ask({ query: 'hello' }, { ...signedHeaders('lan'), 'x-appota-auth-signature': 'invalid' })).status === 401, 'Invalid identity signature is rejected');
+  const staleTimestamp = String(Math.floor(Date.now() / 1000) - 61);
+  const staleHeaders = { 'x-appota-user-id': 'lan', 'x-appota-auth-timestamp': staleTimestamp,
+    'x-appota-auth-signature': signTrustedIdentity(environment.APPOTA_AUTH_SECRET, staleTimestamp, 'lan', 'POST', '/api/chat') };
+  check((await ask({ query: 'hello' }, staleHeaders)).status === 401, 'Expired identity signature is rejected');
+  check((await ask({ query: 'hello' }, signedHeaders('unknown'))).status === 403, 'Authenticated identity without a persona is rejected');
+  check((await ask({ query: 'hello', personaId: 'mai' }, signedHeaders('lan'))).status === 403, 'Authenticated caller cannot select another persona');
+  const authenticated = await ask({ query: 'Nghỉ phép bao nhiêu ngày?' }, signedHeaders('lan'));
+  check(authenticated.status === 200 && (await authenticated.json()).citations[0].doc_id === 'POL-A-LV', 'Server binds policy lookup to authenticated identity');
+  const signedGet = new NextRequest('https://example.test/api/chat', { headers: signedHeaders('lan', 'GET') });
+  const privateMeta = await (await GET(signedGet)).json();
+  check(privateMeta.personas.length === 1 && privateMeta.personas[0].userId === 'lan', 'Production bootstrap exposes only the authenticated persona');
+  environment.APPOTA_RATE_LIMIT_MAX = '2';
+  const maiHeaders = signedHeaders('mai');
+  check((await ask({ query: 'hello' }, maiHeaders)).status === 200, 'First request remains inside quota');
+  check((await ask({ query: 'hello' }, maiHeaders)).status === 200, 'Second request remains inside quota');
+  const limited = await ask({ query: 'hello' }, maiHeaders);
+  check(limited.status === 429 && Number(limited.headers.get('Retry-After')) >= 1, 'Quota returns 429 with Retry-After');
   console.log(`${checks} chat checks passed; Gemini requests mocked; no data sent externally.`);
 }
 

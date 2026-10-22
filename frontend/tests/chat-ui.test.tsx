@@ -27,12 +27,37 @@ it('shows JSON as answer source and uses server personas', async () => {
   expect(screen.queryByText(/Supabase Live/)).toBeNull();
   expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual(['Lan · Staff']);
 });
+it('loads Supabase health separately without delaying bootstrap', async () => {
+  const checking = { ...bootstrap, supabase: { configured: true, connected: false, checking: true } };
+  const fetcher = vi.fn((url: string) => Promise.resolve(Response.json(url === '/api/health'
+    ? { configured: true, connected: true, ready: true } : checking)));
+  vi.stubGlobal('fetch', fetcher);
+  await ready();
+  await screen.findByText('Sẵn sàng');
+  expect(fetcher.mock.calls.map(call => call[0])).toEqual(['/api/chat', '/api/health']);
+});
 it('recovers from broken storage and reports bootstrap failure', async () => {
   localStorage.setItem(STORAGE_KEY, '{broken');
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
   await ready();
   expect(screen.getByRole('status').textContent).toContain('Không tải được trạng thái hệ thống');
-  expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).version).toBe(2);
+  await waitFor(() => expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).version).toBe(2));
+});
+it('does not render a stored citation outside its effective window', async () => {
+  const chat = newConversation('lan', '2026-10-14');
+  chat.title = 'Tampered evidence';
+  chat.messages = [{ id: 'bad-evidence', sender: 'assistant', content: 'Untrusted stored answer', status: 'ok',
+    queryDate: '2026-10-14', provider: 'rules', createdAt: new Date().toISOString(), citations: [{
+      doc_id: 'POL-A-LV', doc_uid: 'POL-A-LV@v2.0', version: 'v2.0', clause: 'entitlement', title: 'Policy',
+      text_source: '14 days', valid_from: '2026-10-15', valid_to: null, scope_level: 'Company',
+      clause_id: 'POL-A-LV@v2.0#entitlement',
+      source_ref: { path: 'data/documents.json', line: 68, json_pointer: '/2/clauses/entitlement' },
+    }] }];
+  localStorage.setItem(STORAGE_KEY, serializeConversations([chat]));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(bootstrap)));
+  await ready();
+  expect(screen.queryByText('Untrusted stored answer')).toBeNull();
+  expect(screen.queryByRole('button', { name: /POL-A-LV/ })).toBeNull();
 });
 it('keeps structured context on follow-up and restores citations safely', async () => {
   const fetcher = vi.fn().mockResolvedValueOnce(Response.json(bootstrap)).mockImplementation(() => Promise.resolve(Response.json(reply)));

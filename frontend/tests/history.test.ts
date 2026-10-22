@@ -5,7 +5,8 @@ import type { Conversation } from '../src/types';
 function fixture(): Conversation {
   const chat = newConversation('lan', '2026-10-14');
   chat.messages = [{ id: 'bot', sender: 'assistant', content: '14 ngày', createdAt: new Date().toISOString(), status: 'ok',
-    queryDate: '2026-10-14', provider: 'rules', citations: [{ doc_id: 'POL-A-LV', version: 'v2.0', clause: 'entitlement', title: 'Policy' }],
+    queryDate: '2026-10-14', provider: 'rules', citations: [{ doc_id: 'POL-A-LV', version: 'v2.0', clause: 'entitlement', title: 'Policy',
+      valid_from: '2026-03-01', valid_to: null }],
     graph: { nodes: [{ id: 'p', label: 'Policy', type: 'policy' }], edges: [] }, trace: { status: 'ok' } }];
   return chat;
 }
@@ -28,6 +29,16 @@ describe('browser history', () => {
   ])('drops corrupted conversations before rendering', mutate => {
     const good = fixture(), bad = fixture(); mutate(bad);
     expect(restoreConversations(JSON.stringify([bad, good]), ['lan'])).toEqual([good]);
+  });
+  it.each([
+    ['missing query date', (c: Conversation) => { delete c.messages[0].queryDate; }],
+    ['future citation', (c: Conversation) => { c.messages[0].citations![0].valid_from = '2026-10-15'; }],
+    ['expired citation', (c: Conversation) => { c.messages[0].citations![0].valid_to = '2026-10-14'; }],
+    ['missing validity metadata', (c: Conversation) => { delete c.messages[0].citations![0].valid_from; }],
+  ])('drops stored history with %s', (_label, mutate) => {
+    const bad = fixture();
+    mutate(bad);
+    expect(restoreConversations(serializeConversations([bad]), ['lan'])).toEqual([]);
   });
   it('rejects unknown versions and bounds storage size', () => {
     expect(() => restoreConversations('{"version":99,"conversations":[]}')).toThrow();

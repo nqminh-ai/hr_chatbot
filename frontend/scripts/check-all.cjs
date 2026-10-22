@@ -1,6 +1,6 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const checks = ['check-data.cjs', 'check-contracts.cjs', 'check-gemini.cjs', 'check-chat.cjs',
+const checks = ['check-data.cjs', 'check-provenance.cjs', 'check-contracts.cjs', 'check-gemini.cjs', 'check-chat.cjs',
   '../node_modules/vitest/vitest.mjs', 'check-supabase.cjs'];
 for (const check of checks) {
   const args = [path.resolve(__dirname, check), ...(check.endsWith('vitest.mjs') ? ['run'] : [])];

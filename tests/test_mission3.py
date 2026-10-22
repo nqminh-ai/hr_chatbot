@@ -146,7 +146,7 @@ class Mission3Tests(unittest.TestCase):
         self.assertEqual(citation["doc_uid"], f'{citation["doc_id"]}@{citation["version"]}')
         self.assertEqual(citation["clause_id"], f'{citation["doc_uid"]}#entitlement')
         self.assertEqual(citation["valid_from"], "2024-01-01")
-        self.assertEqual(citation["valid_to"], "2026-02-28")
+        self.assertEqual(citation["valid_to"], "2026-03-01")
         self.assertTrue(citation["text_source"])
         self.assertEqual(citation["source_ref"]["path"], "data/documents.json")
 

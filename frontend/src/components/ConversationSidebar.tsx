@@ -31,7 +31,7 @@ export function ConversationSidebar({ conversations, active, mobileOpen, onSelec
         <p className="flex justify-between gap-2"><span className="text-neutral-500">Nguồn trả lời:</span><span>JSON mẫu</span></p>
         <p className="flex justify-between gap-2"><span className="text-neutral-500">Kết nối Supabase:</span>
           <span className={supabaseStatus?.connected ? 'text-emerald-400' : 'text-neutral-400'}>
-            {supabaseStatus === null ? 'Đang kiểm tra' : supabaseStatus?.connected
+            {supabaseStatus === null || supabaseStatus?.checking ? 'Đang kiểm tra' : supabaseStatus?.connected
               ? supabaseStatus.ready ? 'Sẵn sàng' : 'Chưa có dữ liệu'
               : supabaseStatus?.configured ? 'Chưa kết nối' : 'Chưa cấu hình'}
           </span>

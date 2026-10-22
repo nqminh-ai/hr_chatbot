@@ -1,5 +1,5 @@
 ﻿"id","position","status","description","owner","evidence"
-"M01","0","unresolved","Đề xuất valid_to exclusive 2026-03-01 cho A v1; owner xác nhận trước migration.","\N","\N"
+"M01","0","unresolved","Đã áp dụng valid_to exclusive 2026-03-01 cho A v1 trong mock fixture; HR_A phải xác nhận trước production migration.","\N","\N"
 "M02","1","unresolved","10 ngày báo trước của Team chưa rõ working/calendar; giữ unspecified_days.","\N","\N"
 "M03","2","unresolved","Chuyển sentinel 99 thành unlimited/null trong mẫu; cần owner xác nhận.","\N","\N"
 "M04","3","unresolved","Approval events là synthetic proposal, chưa có bằng chứng lịch sử thật.","\N","\N"

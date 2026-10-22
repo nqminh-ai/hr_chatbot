@@ -11,7 +11,7 @@ Demo trợ lý tra cứu chính sách nghỉ phép, có hội thoại nhiều l�
 | Supabase | Kiểm tra kết nối bằng RPC `knowledge_health()`, chỉ trả boolean. Chưa dùng Supabase để trả lời chính sách hoặc lưu lịch sử chat. |
 | Lịch sử hội thoại | `localStorage` phiên bản 2; kiểm tra ngày, citations, graph, trace và context trước khi khôi phục. |
 | Backend Python | Rule engine trong `engine/`, giao diện Streamlit trong `app.py`, API Python trong `api/index.py`. Next.js chưa gọi API Python. |
-| Dữ liệu | Bộ chính sách và nhân sự mẫu; lựa chọn persona là bối cảnh tra cứu mẫu, chưa có đăng nhập/SSO thật. |
+| Dữ liệu | Bộ chính sách và nhân sự mẫu; persona selector chỉ hoạt động khi bật rõ chế độ demo. Production yêu cầu identity do gateway ký và server tự gắn persona. |
 
 ## Chạy chatbot local
 
@@ -48,6 +48,7 @@ Giữ cấu hình [frontend/vercel.json](frontend/vercel.json) và [frontend/nex
 Thêm biến môi trường tại **Project Settings → Environment Variables** cho môi trường cần deploy:
 
 - Gemini: `GEMINI_ENABLED`, `GEMINI_API_KEY`, `GEMINI_MODEL`.
+- Xác thực: `APPOTA_DEMO_MODE=true` chỉ cho demo mẫu. Production dùng `APPOTA_AUTH_MODE=trusted-header` và `APPOTA_AUTH_SECRET` phía server; xem hướng dẫn gateway trong `frontend/README.md`.
 - Supabase, nếu dùng kiểm tra kết nối: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
 `.env.local` được Git bỏ qua và không được tải lên qua GitHub. Sau khi đổi biến trên Vercel, tạo deployment mới. Biến `NEXT_PUBLIC_*` được dùng ở bước build; xem [Vercel Environment Variables](https://vercel.com/docs/environment-variables).
@@ -89,7 +90,9 @@ Mở `http://127.0.0.1:8000`; giao diện này dùng API `/api` và khác với 
 | `supabase/schema.sql`, `supabase/seed.sql` | Schema PostgreSQL và seed mẫu để chuẩn bị tích hợp Supabase. |
 | `scripts/export_sqlite_to_supabase.py` | Xuất SQLite local thành `supabase/seed.sql`; không tự tải dữ liệu lên Supabase. |
 
-Dùng `manage_database.bat` hoặc `manage_database.py` để quản trị SQLite. Sửa CSV cần kiểm tra và import trước khi Streamlit nhận thay đổi. Import SQLite hoặc chỉnh Supabase **không tự cập nhật** JSON mà Next.js đang đọc. Chi tiết ở [docs/database.md](docs/database.md).
+Fixture `knowledge.json` tự khai báo `activation_allowed=false`. Development/demo có thể nạp fixture này; production artifact chỉ được active sau khi mọi migration decision có owner/evidence, mọi document được duyệt và lifecycle/provenance không còn nguồn mock. Next production demo phải đặt rõ `APPOTA_DEMO_MODE=true`; Python production đặt `APPOTA_ENV=production` và mặc định từ chối fixture inactive.
+
+Dùng `manage_database.bat` hoặc `manage_database.py` để quản trị SQLite. Database schema v1 cũ cần chạy `manage_database.py migrate`; lệnh tạo backup trước khi chuyển mock fixture về inactive. Sửa CSV cần kiểm tra và import trước khi Streamlit nhận thay đổi. Import SQLite hoặc chỉnh Supabase **không tự cập nhật** JSON mà Next.js đang đọc. Chi tiết ở [docs/database.md](docs/database.md).
 
 Để tạo lại seed Supabase từ database local:
 
@@ -102,7 +105,15 @@ Exporter đọc một transaction SQLite, validate trước khi ghi file và kh�
 
 ## Kiểm tra
 
-Frontend, chạy trong `frontend/`:
+Toàn bộ gate, chạy từ thư mục gốc:
+
+```powershell
+npm.cmd --prefix frontend run verify
+```
+
+Đây là lệnh chuẩn dùng cho local và GitHub Actions. Lệnh dừng ngay nếu Python validation/coverage, provenance, frontend/integration tests, lint hoặc production build thất bại. Coverage dòng của `engine/*.py` phải đạt ít nhất **80%**; báo cáo được tạo tại `docs/evidence/python_coverage.json`. Gate không gọi Gemini hay Supabase thật. Riêng build trong gate chủ động bật `APPOTA_DEMO_MODE=true` vì repository chỉ chứa fixture demo inactive; cấu hình này không thay thế governance gate của dữ liệu production.
+
+Có thể chạy từng lớp trong `frontend/` khi cần chẩn đoán:
 
 ```powershell
 npm.cmd test
@@ -110,7 +121,11 @@ npm.cmd run lint
 npm.cmd run build
 ```
 
+`npm test` và `npm run build` đều chạy gate provenance bằng Node. Gate đọc byte thật của ba file nguồn, kiểm tra SHA-256, khoảng dòng, JSON pointer, text, typed value/floor/unit và identity policy/version; sai lệch làm lệnh trả exit code khác 0. GitHub Actions chạy toàn bộ `npm run verify` cho mọi pull request và push lên `main`. Build Vercel riêng vẫn không cần Python.
+
 `npm test` chạy validation dữ liệu/body, contracts, kiểm tra output Gemini, API chat, React UI và migration/read-back PostgreSQL nhúng. Test SQL cần `.venv` ở root; có thể đặt `APPOTA_PYTHON` để chọn interpreter khác. Các test này không gọi dịch vụ thật. `npm run test:gemini:live` gửi đúng câu hỏi mẫu cùng fact mẫu tới Google và ghi kết quả trong `docs/evidence/gemini_live.json`.
+
+Lỗi vận hành của chat, Gemini và Supabase được ghi thành JSON với đúng sáu trường allow-list: `event`, `requestId`, `stage`, `code`, `errorClass`, `elapsedMs`. Telemetry không ghi error message, prompt, lịch sử hội thoại, URL, API key hay thông tin persona; `requestId` cũng được trả trong API để đối chiếu sự cố.
 
 Backend, chạy từ thư mục gốc:
 
@@ -126,7 +141,7 @@ Backend, chạy từ thư mục gốc:
 
 Chat hỗ trợ hỏi về số ngày phép, thời hạn báo trước, người duyệt, thời gian hạn chế nghỉ và người trực thay trong bộ dữ liệu mẫu. Đổi nhân sự/ngày áp dụng trong Next.js mở cuộc trò chuyện mới. Nguồn, graph và trace có thể xem theo câu trả lời.
 
-Quy tắc fixture vẫn giữ khoảng trống chính sách A tại **28/02/2026**, đơn vị `unspecified_days` cho quy định báo trước của Team và các quyết định migration M01–M06 chưa được xác nhận. Persona mẫu không thay thế xác thực người dùng. Chưa có đồng bộ hội thoại theo tài khoản, vector database hay audit log bền vững.
+Fixture đã khép khoảng trống chính sách A: v1 dùng `valid_to` exclusive **01/03/2026**, nên ngày 28/02 vẫn dùng v1 và ngày 01/03 chuyển sang v2. M01 vẫn `unresolved` vì thay đổi trên mock chưa thay thế xác nhận của HR_A cho production. Quy định báo trước của Team vẫn có đơn vị `unspecified_days`; các quyết định migration M01–M06 chưa được xác nhận. Persona mẫu không thay thế xác thực người dùng. Production fail-closed nếu gateway chưa cung cấp identity có chữ ký; chưa có đồng bộ hội thoại theo tài khoản, vector database hay audit log bền vững.
 
 Khi bật Gemini, câu hỏi, tối đa 6 câu hỏi trước đó và điều khoản đã lọc được gửi sang Google; không gửi toàn bộ kho hay nội dung assistant từ client. Chỉ dùng dữ liệu mẫu cho cấu hình demo hiện tại. Schema Supabase mới đóng quyền công khai trên corpus/chat; database đã triển khai cần chạy migration rồi kiểm tra quyền. Persona mẫu vẫn chưa phải xác thực nhân viên.
 

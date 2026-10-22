@@ -12,9 +12,12 @@ Backup và lưu cấu hình grants/policies hiện tại để có thể khôi p
 
 1. [20261015_close_public_access.sql](migrations/20261015_close_public_access.sql): thu hồi quyền corpus/chat của public/anon/authenticated, đóng các policy demo, bật RLS, view dùng quyền caller, thêm health RPC.
 2. [20261015_dataset_created_on_date.sql](migrations/20261015_dataset_created_on_date.sql): chuyển ngày tạo dataset từ timestamp về DATE theo timezone dataset.
-3. [verify_access.sql](verify_access.sql): xác minh catalog không còn grants công khai, RLS/view/RPC đúng cấu hình.
+3. [20261022_governance_activation_gate.sql](migrations/20261022_governance_activation_gate.sql): đánh dấu mọi mock runtime là inactive, mở enum cho artifact đã duyệt và chỉ để health báo ready khi artifact được activate.
+4. [verify_access.sql](verify_access.sql): xác minh catalog không còn grants công khai, RLS/view/RPC đúng cấu hình.
 
 Migration không xóa bảng hay dòng, có thể chạy lại. Quyền service role được giữ. Không cấp lại policy công khai để sửa lỗi kết nối: kiểm tra RPC, URL và anon key. Nếu cần rollback, khôi phục grants/policies từ bản lưu trước migration; kiểu timestamp cũ có thể tái tạo từ ngày và timezone nhưng không khôi phục được giờ đã bị loại bỏ. Dataset chỉ sử dụng ngày, không có nghiệp vụ lưu giờ tạo.
+
+Seed trong repo là fixture mẫu nên có `activation_allowed=false`; vì vậy `knowledge_health()` trả `false` dù kết nối và quyền RPC đúng. Chỉ artifact `policy_runtime` đã qua governance gate mới được đặt active. Không sửa trực tiếp cờ activation để làm health xanh: loader vẫn từ chối nếu decision, owner/evidence, review state hoặc nguồn lịch sử chưa đạt.
 
 Migration trong repo chưa được áp dụng lên Supabase thật trong đợt triển khai này. Kiểm tra PostgreSQL nhúng không chứng minh cấu hình project live đã đổi.
 

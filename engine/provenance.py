@@ -26,9 +26,37 @@ def pointer_value(raw, pointer):
         raise MetadataError('Source JSON pointer does not resolve') from error
 
 
+def top_level_object_ranges(content):
+    ranges = []
+    depth = 0
+    start = None
+    in_string = False
+    escaped = False
+    for line_number, line in enumerate(content.decode('utf-8').splitlines(), 1):
+        for character in line:
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif character == '\\':
+                    escaped = True
+                elif character == '"':
+                    in_string = False
+            elif character == '"':
+                in_string = True
+            elif character in '[{':
+                if character == '{' and depth == 1:
+                    start = line_number
+                depth += 1
+            elif character in ']}':
+                if character == '}' and depth == 2:
+                    ranges.append((start, line_number))
+                depth -= 1
+    return ranges
+
+
 def verify_provenance(raw, root=ROOT):
     root = Path(root).resolve()
-    sources, bytes_by_path = {}, {}
+    sources, bytes_by_path, ranges_by_path = {}, {}, {}
     for name, expected in raw['source_sha256'].items():
         relative = PurePosixPath(name)
         if relative.is_absolute() or '..' in relative.parts or ':' in name or '\\' in name:
@@ -44,6 +72,7 @@ def verify_provenance(raw, root=ROOT):
         if hashlib.sha256(content).hexdigest() != expected:
             raise MetadataError(f'Actual source fingerprint mismatch: {name}')
         bytes_by_path[name] = content
+        ranges_by_path[name] = top_level_object_ranges(content)
     transformations = []
     for doc in raw['documents']:
         provenance = doc['provenance']
@@ -64,9 +93,13 @@ def verify_provenance(raw, root=ROOT):
                 raise MetadataError('Clause source line does not identify its key')
             # A pointer to another identical clause must not change document identity.
             pointer_doc = source['json_pointer'].split('/')[1]
-            source_doc = sources[source['path']][int(pointer_doc)]
+            source_index = int(pointer_doc)
+            source_doc = sources[source['path']][source_index]
             if source_doc['doc_id'] != doc['policy_id'] or source_doc['version'] != doc['version']:
                 raise MetadataError('Clause pointer belongs to another policy/version')
+            exact_range = ranges_by_path[source['path']][source_index]
+            if exact_range != (provenance['line_start'], provenance['line_end']):
+                raise MetadataError('Document source range differs from actual evidence')
             typed = clause['typed_value']
             if typed['kind'] == 'unlimited':
                 if value.get('value') != 99 or typed['value'] is not None:

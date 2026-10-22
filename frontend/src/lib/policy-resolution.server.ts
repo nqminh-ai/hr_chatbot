@@ -4,10 +4,10 @@ import type { Citation, KnowledgeGraphData } from '../types';
 export type Fact = { key: string; text: string; citation: Citation; value: number | string | null; unit: string };
 export class PolicyConflict extends Error {}
 
-export function scopePath(profile: Profile) {
+export function scopePath(profile: Profile, snapshot: typeof knowledgeSnapshot = knowledgeSnapshot) {
   const scopes: string[] = [];
   let current: string | null = profile.team || profile.department;
-  while (current) { scopes.push(current); current = knowledgeSnapshot.units[current].parent; }
+  while (current) { scopes.push(current); current = snapshot.units[current].parent; }
   return scopes;
 }
 
@@ -30,7 +30,7 @@ export function effective(policy: Policy, day: string) {
 export function selectVersions(documents: Policy[], day: string) {
   const groups = new Map<string, Policy[]>();
   for (const policy of documents.filter(item => item.lifecycle.events.some(event => event.event === 'approved'))) {
-    const key = `${policy.policy_id}:${policy.scope.unit_id}:${[...policy.access.audience_roles].sort().join(',')}`;
+    const key = `${policy.policy_id}:${policy.scope.unit_id}:${policy.access.audience_roles.join(',')}`;
     groups.set(key, [...(groups.get(key) || []), policy]);
   }
   const selected: Policy[] = [];
@@ -44,9 +44,10 @@ export function selectVersions(documents: Policy[], day: string) {
   return selected;
 }
 
-export function selectPolicies(profile: Profile, day: string, target: string | null, version: string | null, restricted: boolean) {
-  const scopes = scopePath(profile);
-  const allowed = knowledgeSnapshot.data.documents.filter(policy => readable(policy, profile, scopes));
+export function selectPolicies(profile: Profile, day: string, target: string | null, version: string | null, restricted: boolean,
+  snapshot: typeof knowledgeSnapshot = knowledgeSnapshot) {
+  const scopes = scopePath(profile, snapshot);
+  const allowed = snapshot.data.documents.filter(policy => readable(policy, profile, scopes));
   const selected = selectVersions(allowed.filter(policy => (!target || policy.policy_id === target)
     && (!version || policy.version.toLowerCase() === version)
     && (!restricted || policy.access.classification === 'Confidential')), day);
@@ -66,8 +67,8 @@ export function renderClause(clause: Clause) {
   return `Thông báo trước tối thiểu ${value.value} ${units[value.unit]}.`;
 }
 
-export function resolveFacts(documents: Policy[], profile: Profile, keys: string[]): Fact[] {
-  const scopes = scopePath(profile);
+export function resolveFacts(documents: Policy[], profile: Profile, keys: string[], snapshot: typeof knowledgeSnapshot = knowledgeSnapshot): Fact[] {
+  const scopes = scopePath(profile, snapshot);
   const resolved = new Map<string, { policy: Policy; clause: Clause }>();
   const collisions = new Set<string>();
   const floors: { policy: Policy; clause: Clause }[] = [];

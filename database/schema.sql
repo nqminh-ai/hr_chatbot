@@ -3,8 +3,8 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE dataset_info (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
     schema_version TEXT NOT NULL CHECK (schema_version = '2.0'),
-    artifact_kind TEXT NOT NULL CHECK (artifact_kind = 'mock_runtime'),
-    activation_allowed INTEGER NOT NULL CHECK (activation_allowed = 1),
+    artifact_kind TEXT NOT NULL CHECK (artifact_kind IN ('mock_runtime', 'policy_runtime')),
+    activation_allowed INTEGER NOT NULL CHECK (activation_allowed IN (0, 1)),
     created_on TEXT NOT NULL,
     timezone TEXT NOT NULL CHECK (timezone = 'Asia/Ho_Chi_Minh'),
     sample_id TEXT NOT NULL CHECK (length(sample_id) > 0)
@@ -40,17 +40,20 @@ CREATE TABLE documents (
     scope_id TEXT NOT NULL REFERENCES organization(id),
     scope_level TEXT NOT NULL CHECK (scope_level IN ('Group', 'Company', 'Department', 'Team')),
     lifecycle_state TEXT NOT NULL CHECK (lifecycle_state IN ('Draft', 'Approved', 'Superseded', 'Revoked')),
-    valid_from TEXT NOT NULL, valid_to TEXT, history_evidence TEXT NOT NULL,
+    valid_from TEXT NOT NULL, valid_to TEXT,
+    history_evidence TEXT NOT NULL CHECK (history_evidence IN ('mock_fixture', 'authoritative_record')),
     classification TEXT NOT NULL CHECK (classification IN ('Public', 'Internal', 'Confidential')),
     allowed_roles_json TEXT NOT NULL CHECK (json_valid(allowed_roles_json) AND json_type(allowed_roles_json) = 'array'),
     applies_to_json TEXT NOT NULL CHECK (json_valid(applies_to_json) AND json_type(applies_to_json) = 'array'),
     audience_roles_json TEXT NOT NULL CHECK (json_valid(audience_roles_json) AND json_type(audience_roles_json) = 'array'),
     deny_on_missing INTEGER NOT NULL CHECK (deny_on_missing = 1),
-    owner_id TEXT NOT NULL, review_due TEXT, review_state TEXT NOT NULL,
+    owner_id TEXT NOT NULL, review_due TEXT,
+    review_state TEXT NOT NULL CHECK (review_state IN ('needs_owner_review', 'approved')),
     source_path TEXT NOT NULL REFERENCES source_hashes(source_path),
     line_start INTEGER NOT NULL CHECK (line_start > 0),
     line_end INTEGER NOT NULL CHECK (line_end >= line_start),
-    source_sha256 TEXT NOT NULL CHECK (length(source_sha256) = 64), source_type TEXT NOT NULL,
+    source_sha256 TEXT NOT NULL CHECK (length(source_sha256) = 64),
+    source_type TEXT NOT NULL CHECK (source_type IN ('mock_json', 'authoritative_json')),
     UNIQUE (policy_id, version),
     CHECK (doc_uid = policy_id || '@' || version),
     CHECK (valid_to IS NULL OR valid_to > valid_from)
@@ -81,7 +84,8 @@ CREATE TABLE lifecycle_events (
     doc_uid TEXT NOT NULL REFERENCES documents(doc_uid),
     position INTEGER NOT NULL CHECK (position >= 0),
     event TEXT NOT NULL CHECK (event IN ('drafted', 'approved', 'superseded', 'revoked')),
-    event_date TEXT NOT NULL, evidence_type TEXT NOT NULL,
+    event_date TEXT NOT NULL,
+    evidence_type TEXT NOT NULL CHECK (evidence_type IN ('mock_fixture', 'authoritative_record')),
     PRIMARY KEY (doc_uid, position)
 ) STRICT;
 CREATE TABLE supersedes (
@@ -107,4 +111,4 @@ SELECT d.doc_uid, d.title, o.name AS scope_name, d.lifecycle_state, d.classifica
        d.valid_from, d.valid_to, d.owner_id, d.review_state, count(c.clause_id) AS clause_count
 FROM documents d JOIN organization o ON o.id = d.scope_id
 LEFT JOIN clauses c ON c.doc_uid = d.doc_uid GROUP BY d.doc_uid;
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;

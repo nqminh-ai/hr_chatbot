@@ -12,11 +12,13 @@ export interface Persona {
 
 export interface Citation {
   doc_id: string;
+  doc_uid?: string;
   version: string;
   clause: string;
   title: string;
   text_source?: string;
   valid_from?: string;
+  valid_to?: string | null;
   scope_level?: string;
   source_ref?: { path: string; line: number; json_pointer: string };
   clause_id?: string;

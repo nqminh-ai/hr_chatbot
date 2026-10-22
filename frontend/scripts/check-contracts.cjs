@@ -14,12 +14,17 @@ const results = cases.map(item => {
     claims: Object.fromEntries(result.facts.map(fact => [fact.key, {
       value: fact.value, unit: fact.unit, source: `${fact.citation.doc_id}@${fact.citation.version}`,
     }])),
+    citations: Object.fromEntries(result.citations.map(citation => [citation.clause_id, {
+      doc_uid: citation.doc_uid, valid_from: citation.valid_from, valid_to: citation.valid_to,
+      scope_level: citation.scope_level, text_source: citation.text_source, source_ref: citation.source_ref,
+    }])),
   } };
 });
 if (process.argv.includes('--json')) process.stdout.write(JSON.stringify(results));
 else {
   const { isDeepStrictEqual } = require('node:util');
-  const failures = results.filter((item, index) => !isDeepStrictEqual(item.actual, cases[index].expected));
+  const businessResult = actual => ({ status: actual.status, query_date: actual.query_date, claims: actual.claims });
+  const failures = results.filter((item, index) => !isDeepStrictEqual(businessResult(item.actual), cases[index].expected));
   console.log(`${results.length - failures.length}/${results.length} TS contracts; failed=${failures.map(item => item.id)}`);
   process.exitCode = failures.length ? 1 : 0;
 }

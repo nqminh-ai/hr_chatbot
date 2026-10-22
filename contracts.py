@@ -20,11 +20,24 @@ def canonical_python(result):
     return {"status": result["status"], "query_date": result["query_date"], "claims": {
         claim["key"]: {"value": claim["value"], "unit": claim["unit"],
                        "source": claim["source"]["doc_id"] + "@" + claim["source"]["version"]}
-        for claim in result["claims"]}}
+        for claim in result["claims"]}, "citations": {
+        citation["clause_id"]: {
+            "doc_uid": citation["doc_uid"],
+            "valid_from": citation["valid_from"],
+            "valid_to": citation["valid_to"],
+            "scope_level": citation["scope_level"],
+            "text_source": citation["text_source"],
+            "source_ref": citation["source_ref"],
+        }
+        for citation in result.get("citations", [])}}
 
 
 def contract_errors(actual, expected):
     return [key + " differs" for key in ("status", "query_date", "claims") if actual[key] != expected[key]]
+
+
+def parity_errors(python_result, typescript_result):
+    return [] if python_result == typescript_result else ["engine parity differs"]
 
 
 def run_contracts():
@@ -43,8 +56,7 @@ def run_contracts():
         ts_actual = typescript[case["id"]]
         errors = ["python: " + error for error in contract_errors(actual, case["expected"])]
         errors += ["typescript: " + error for error in contract_errors(ts_actual, case["expected"])]
-        if actual != ts_actual:
-            errors.append("engine parity differs")
+        errors += parity_errors(actual, ts_actual)
         results.append({"id": case["id"], "passed": not errors, "errors": errors,
                         "python": actual, "typescript": ts_actual})
     return results

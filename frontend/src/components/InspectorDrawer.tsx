@@ -11,6 +11,7 @@ interface InspectorDrawerProps {
   graph?: KnowledgeGraphData;
   trace?: Record<string, unknown>;
   selectedCitation?: Citation | null;
+  queryDate?: string;
 }
 
 export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
@@ -20,6 +21,7 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
   graph,
   trace,
   selectedCitation,
+  queryDate,
 }) => {
   const [activeTab, setActiveTab] = useState<'citations' | 'graph' | 'trace'>('citations');
 
@@ -116,11 +118,29 @@ export const InspectorDrawer: React.FC<InspectorDrawerProps> = ({
                       </div>
                     )}
                     {c.valid_from && (
-                      <div className="text-[10px] text-neutral-400 mt-2 flex items-center justify-between">
-                        <span>Hiệu lực từ: {c.valid_from}</span>
-                        <span className="text-emerald-500 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Nguồn mẫu
-                        </span>
+                      <div className="mt-2 space-y-1.5 text-[10px] text-neutral-400">
+                        <div className="flex items-center justify-between gap-2">
+                          <span>
+                            Hiệu lực: {c.valid_from} → {c.valid_to || 'không thời hạn'}
+                          </span>
+                          {queryDate && (
+                            <span className="text-emerald-500 flex items-center gap-1 whitespace-nowrap">
+                              <CheckCircle2 className="w-3 h-3" /> Có hiệu lực ngày {queryDate}
+                            </span>
+                          )}
+                        </div>
+                        {c.source_ref && (
+                          <div className="rounded bg-neutral-950 px-2 py-1.5 text-neutral-500 break-all space-y-1">
+                            <div>
+                              <span className="text-neutral-400">Vị trí nguồn:</span>{' '}
+                              <span className="font-mono">{c.source_ref.path}:{c.source_ref.line}</span>
+                            </div>
+                            <div>
+                              <span className="text-neutral-400">Định danh phần:</span>{' '}
+                              <span className="font-mono">{c.source_ref.json_pointer}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

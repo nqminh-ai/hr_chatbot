@@ -86,8 +86,10 @@ export function resolveFacts(documents: Policy[], profile: Profile, keys: string
   }
   return [...resolved.values()].filter(({ clause }) => !keys.length || keys.includes(clause.key)).map(({ policy, clause }) => ({
     key: clause.key, text: renderClause(clause), value: clause.typed_value.value, unit: clause.typed_value.unit,
-    citation: { doc_id: policy.policy_id, version: policy.version, clause: clause.key, title: policy.title,
-      text_source: renderClause(clause), valid_from: policy.lifecycle.valid_from, scope_level: policy.scope.level,
+    citation: { doc_id: policy.policy_id, doc_uid: policy.doc_uid, version: policy.version,
+      clause: clause.key, title: policy.title,
+      text_source: clause.text_source, valid_from: policy.lifecycle.valid_from,
+      valid_to: policy.lifecycle.valid_to, scope_level: policy.scope.level,
       source_ref: clause.source_ref, clause_id: clause.clause_id },
   }));
 }

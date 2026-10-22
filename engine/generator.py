@@ -11,6 +11,9 @@ def citation(document, clause):
     return {"doc_id": document.policy_id, "doc_uid": document.doc_uid,
             "version": document.version, "scope_level": document.scope_level,
             "title": document.title, "clause": clause.key, "clause_id": clause.clause_id,
+            "text_source": clause.text,
+            "valid_from": document.valid_from.isoformat(),
+            "valid_to": document.valid_to.isoformat() if document.valid_to else None,
             "source_ref": plain(clause.source_ref)}
 
 

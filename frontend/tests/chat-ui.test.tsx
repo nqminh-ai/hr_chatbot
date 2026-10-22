@@ -44,6 +44,22 @@ it('keeps structured context on follow-up and restores citations safely', async 
   expect(payload.context).toEqual(context);
   expect(payload.messages).toEqual([{ sender: 'user', content: 'Nghỉ phép?' }]);
 });
+it('B5 lets users verify the exact document version, section and source location', async () => {
+  const citedReply = { ...reply, citations: [{
+    doc_id: 'POL-A-LV', doc_uid: 'POL-A-LV@v2.0', version: 'v2.0', clause: 'entitlement', title: 'Quy chế nghỉ phép',
+    text_source: '14 ngày phép năm có hưởng lương.', valid_from: '2026-03-01', valid_to: null,
+    scope_level: 'Company', clause_id: 'POL-A-LV@v2.0#entitlement',
+    source_ref: { path: 'data/documents.json', line: 68, json_pointer: '/2/clauses/entitlement' },
+  }] };
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json(bootstrap)).mockResolvedValue(Response.json(citedReply)));
+  await ready(); send(); await screen.findByText('14 ngày phép');
+  fireEvent.click(screen.getByRole('button', { name: /POL-A-LV/ }));
+  expect(screen.getByText('Hiệu lực: 2026-03-01 → không thời hạn')).toBeDefined();
+  expect(screen.getByText('Có hiệu lực ngày 2026-10-14')).toBeDefined();
+  expect(screen.getByText(/Vị trí nguồn:/)).toBeDefined();
+  expect(screen.getByText(/data\/documents\.json:68/)).toBeDefined();
+  expect(screen.getByText(/\/2\/clauses\/entitlement/)).toBeDefined();
+});
 it('aborts on conversation switch and ignores a late old response', async () => {
   const chat = newConversation('lan', '2026-10-14');
   chat.title = 'Hội thoại cũ';
@@ -70,6 +86,18 @@ it('stops a request and releases the input for the next message', async () => {
 });
 it('rejects malformed API metadata before displaying a reply', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json(bootstrap)).mockResolvedValue(Response.json({ ...reply, citations: {} })));
+  await ready(); send();
+  await screen.findByText('Phản hồi không hợp lệ. Vui lòng thử lại.');
+  expect(screen.queryByText('14 ngày phép')).toBeNull();
+});
+it('rejects a citation that is not effective on the response query date', async () => {
+  const invalidReply = { ...reply, citations: [{
+    doc_id: 'POL-A-LV', doc_uid: 'POL-A-LV@v2.0', version: 'v2.0', clause: 'entitlement', title: 'Quy chế nghỉ phép',
+    text_source: '14 ngày phép năm có hưởng lương.', valid_from: '2026-10-15', valid_to: null,
+    scope_level: 'Company', clause_id: 'POL-A-LV@v2.0#entitlement',
+    source_ref: { path: 'data/documents.json', line: 68, json_pointer: '/2/clauses/entitlement' },
+  }] };
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json(bootstrap)).mockResolvedValue(Response.json(invalidReply)));
   await ready(); send();
   await screen.findByText('Phản hồi không hợp lệ. Vui lòng thử lại.');
   expect(screen.queryByText('14 ngày phép')).toBeNull();

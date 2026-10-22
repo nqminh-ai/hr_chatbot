@@ -15,10 +15,13 @@ function jsonValue(value: unknown, depth = 0): boolean {
   if (Array.isArray(value)) return value.length <= 400 && value.every(item => jsonValue(item, depth + 1));
   return record(value) && Object.keys(value).length <= 100 && Object.entries(value).every(([key, item]) => key.length <= 100 && jsonValue(item, depth + 1));
 }
-function citation(value: unknown): boolean {
+function citation(value: unknown, canonical = false): boolean {
   if (!record(value) || !['doc_id', 'version', 'clause', 'title'].every(key => text(value[key], 500))) return false;
+  if (value.doc_uid !== undefined && (!text(value.doc_uid, 600) || value.doc_uid !== `${value.doc_id}@${value.version}`)) return false;
   if (value.text_source !== undefined && !text(value.text_source)) return false;
   if (value.valid_from !== undefined && !validDate(value.valid_from)) return false;
+  if (value.valid_to !== undefined && value.valid_to !== null && !validDate(value.valid_to)) return false;
+  if (typeof value.valid_from === 'string' && typeof value.valid_to === 'string' && value.valid_to <= value.valid_from) return false;
   if (value.scope_level !== undefined && !['Group', 'Company', 'Department', 'Team'].includes(String(value.scope_level))) return false;
   if (value.clause_id !== undefined && !text(value.clause_id, 200)) return false;
   if (value.source_ref !== undefined) {
@@ -26,7 +29,14 @@ function citation(value: unknown): boolean {
     if (!record(source) || !text(source.path, 500) || /(^\/|\\|\.\.|:)/.test(source.path)
       || !Number.isSafeInteger(source.line) || Number(source.line) < 1 || !text(source.json_pointer, 500)) return false;
   }
+  if (canonical && (!text(value.doc_uid, 600) || !text(value.text_source)
+    || typeof value.valid_from !== 'string' || !['Group', 'Company', 'Department', 'Team'].includes(String(value.scope_level))
+    || value.clause_id !== `${value.doc_uid}#${value.clause}` || value.source_ref === undefined)) return false;
   return true;
+}
+function citationAppliesAt(value: unknown, day: string): boolean {
+  return record(value) && typeof value.valid_from === 'string' && value.valid_from <= day
+    && (value.valid_to === null || (typeof value.valid_to === 'string' && day < value.valid_to));
 }
 function graph(value: unknown): boolean {
   if (!record(value) || !list(value.nodes, 200, node => record(node) && text(node.id, 200) && text(node.label, 500)
@@ -58,6 +68,7 @@ export function validConversation(value: unknown, personas?: readonly string[]):
 }
 export function validReply(value: unknown): boolean {
   return record(value) && statuses.includes(String(value.status)) && validDate(value.query_date)
+    && list(value.citations, 40, item => citation(item, true) && citationAppliesAt(item, String(value.query_date)))
     && ['rules', 'gemini'].includes(String(value.provider)) && validMessage({ id: 'response', sender: 'assistant', content: value.answer,
     createdAt: new Date().toISOString(), status: value.status, queryDate: value.query_date,
     citations: value.citations, graph: value.graph, trace: value.trace, provider: value.provider })

@@ -139,5 +139,9 @@ Khi bật Gemini, câu hỏi, tối đa 6 câu hỏi trước đó và điều k
 - [Scenario kiểm thử](docs/test_cases.md)
 - [Bộ kiểm thử chi tiết](docs/detailed_test_cases.md)
 - [Tiến độ triển khai và bằng chứng kiểm tra](docs/implementation_progress.md)
+- [Báo cáo Mission 3: Before → After, kiểm thử và giới hạn](docs/MISSION_3_REPORT.md)
+- [Kế hoạch hoàn thiện Mission 3 trong 3 ngày](docs/MISSION_3_COMPLETION_PLAN.md)
+- [Implementation plan Mission 3: kiến trúc, file, test và quality gates](docs/MISSION_3_IMPLEMENTATION_PLAN.md)
+- [Change Request intake Mission 3](docs/MISSION_3_CR_INTAKE.md)
 
 Các kế hoạch, báo cáo và ảnh cũ đã dọn khỏi repository. Bản sao local của đợt dọn nằm trong `.cleanup-backups/` trên máy thực hiện, không được đưa lên GitHub.

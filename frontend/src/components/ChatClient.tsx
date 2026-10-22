@@ -131,6 +131,6 @@ export function ChatClient() {
       <ChatArea key={activeId} messages={active?.messages || []} isLoading={loading || !ready} onSendMessage={sendMessage} onSelectCitation={selectCitation}
         onToggleInspector={() => setInspectorOpen(value => !value)} isInspectorOpen={inspectorOpen} onOpenSidebar={() => setMobileSidebar(true)} onStop={stopReply} provider={provider} />
     </main>
-    <InspectorDrawer isOpen={inspectorOpen} onClose={() => setInspectorOpen(false)} citations={latest?.citations} graph={latest?.graph} trace={latest?.trace} selectedCitation={selectedCitation} />
+    <InspectorDrawer isOpen={inspectorOpen} onClose={() => setInspectorOpen(false)} citations={latest?.citations} graph={latest?.graph} trace={latest?.trace} selectedCitation={selectedCitation} queryDate={latest?.queryDate} />
   </div>;
 }

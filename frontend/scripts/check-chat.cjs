@@ -25,6 +25,13 @@ async function main() {
   check(summary.facts.length === 1 && summary.facts[0].key === 'notice_period', 'Summary retains previous topic');
   const historical = policyAnswer('lan', 'Vậy số ngày phép là bao nhiêu?', day, [{ sender: 'user', content: 'Quy định tại 2026-01-15?' }]);
   check(historical.query_date === '2026-01-15' && historical.facts[0].value === 12, 'Follow-up retains prior effective date');
+  const historicalSource = historical.citations[0];
+  check(historicalSource.doc_uid === `${historicalSource.doc_id}@${historicalSource.version}`
+    && historicalSource.clause_id === `${historicalSource.doc_uid}#${historicalSource.clause}`,
+  'Citation identifiers are internally consistent');
+  check(historicalSource.valid_from === '2024-01-01' && historicalSource.valid_to === '2026-02-28'
+    && historicalSource.source_ref.path && historicalSource.text_source,
+  'Historical citation exposes validity window and source locator');
   check(policyAnswer('lan', 'Chào', day).citations.length === 0, 'Greeting is not a policy answer');
   check(policyAnswer('lan', 'Cảm ơn', day).facts.length === 0, 'Thanks is conversational');
   check(policyAnswer('lan', 'Chế độ phép nghỉ thường niên?', day).facts[0].value === 14, 'Natural annual leave wording');

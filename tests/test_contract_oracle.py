@@ -3,7 +3,7 @@ import copy
 import unittest
 from unittest.mock import patch
 
-from contracts import canonical_python, contract_errors
+from contracts import canonical_python, contract_errors, parity_errors
 from run_tests import SCENARIO_SUITES, run_all_suites
 
 
@@ -25,6 +25,15 @@ class ContractOracleTests(unittest.TestCase):
         expected = {"status": "needs_clarification", "query_date": "2026-10-14", "claims": {}}
         self.assertTrue(contract_errors(wrong, expected))
 
+    def test_citation_metadata_drift_fails_engine_parity(self):
+        python_result = {"status": "answered", "query_date": "2026-10-14", "claims": {},
+                         "citations": {"POL-A-LV@v2.0#entitlement": {"valid_to": None}}}
+        typescript_result = copy.deepcopy(python_result)
+        typescript_result["citations"]["POL-A-LV@v2.0#entitlement"]["valid_to"] = "2026-12-31"
+
+        self.assertEqual(parity_errors(python_result, python_result), [])
+        self.assertEqual(parity_errors(python_result, typescript_result), ["engine parity differs"])
+
     def test_suites_include_private_and_detailed(self):
         with patch("run_tests.run_all_tests", return_value=[{"passed": True}]) as run:
             results = run_all_suites()
@@ -37,3 +46,4 @@ class ContractOracleTests(unittest.TestCase):
             "source": {"doc_id": "GUD-B-PAY-LV", "version": "v1.0"}}]})
         self.assertEqual(actual["claims"]["notice_period"], {
             "value": 10, "unit": "unspecified_days", "source": "GUD-B-PAY-LV@v1.0"})
+        self.assertEqual(actual["citations"], {})

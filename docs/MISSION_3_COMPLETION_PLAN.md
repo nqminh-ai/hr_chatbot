@@ -33,10 +33,11 @@ Phiên bản bàn giao phải:
 - Citation UI đã được bổ sung `valid_to`, ngày tra cứu và source locator.
 - Đã có ba test Mission 3 mô phỏng readiness, edge case và regression.
 - Kết quả kiểm tra gần nhất trên worktree hiện tại:
-  - Backend: 119/119 test pass bằng test discovery.
-  - Frontend UI: 21/21 test pass.
-  - Shared scenario/contracts: 92/92 pass.
-  - Chat checks: 40/40 pass với Gemini được mock.
+  - Backend: 126/126 test pass bằng test discovery.
+  - Frontend UI: 30/30 test pass.
+  - Shared scenario/contracts: 93/93 pass.
+  - Chat checks: 56/56 pass với Gemini được mock.
+  - Python engine coverage: 91%, vượt gate 80%.
   - Lint: pass.
   - Production build: pass.
 

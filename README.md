@@ -158,5 +158,6 @@ Khi bật Gemini, câu hỏi, tối đa 6 câu hỏi trước đó và điều k
 - [Kế hoạch hoàn thiện Mission 3 trong 3 ngày](docs/MISSION_3_COMPLETION_PLAN.md)
 - [Implementation plan Mission 3: kiến trúc, file, test và quality gates](docs/MISSION_3_IMPLEMENTATION_PLAN.md)
 - [Change Request intake Mission 3](docs/MISSION_3_CR_INTAKE.md)
+- [Kịch bản quay video Mission 3 và test runner](docs/MISSION_3_VIDEO_SCRIPT.md)
 
 Các kế hoạch, báo cáo và ảnh cũ đã dọn khỏi repository. Bản sao local của đợt dọn nằm trong `.cleanup-backups/` trên máy thực hiện, không được đưa lên GitHub.

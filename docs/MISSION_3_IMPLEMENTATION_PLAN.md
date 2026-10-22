@@ -13,9 +13,9 @@
 | WP0 — Baseline và CR contract | **Complete** | B5 đã được chuyển thành ba acceptance criteria; baseline `f428463` |
 | WP1 — Fixture và test-first | **Complete** | Có test B5 trực tiếp, edge, regression và temporal boundary |
 | WP2 — Python domain/output | **Complete** | Mỗi claim map đúng document version, clause, source text và locator |
-| WP3 — Next.js + parity | **Complete** | Citation Next.js cùng contract; 12/12 shared contracts so cả metadata |
+| WP3 — Next.js + parity | **Complete** | Citation Next.js cùng contract; 13/13 shared contracts so cả metadata |
 | WP4 — UI verification | **Complete** | Inspector hiển thị tài liệu/phần nguồn/hiệu lực; client từ chối temporal citation sai |
-| WP5 — Regression/evidence/deploy | **Local complete** | 119/119 backend, 92/92 scenario/contracts, 21/21 UI, 40 chat checks, lint/build pass; deploy/video còn lại |
+| WP5 — Regression/evidence/deploy | **Local complete** | 126/126 backend, 93/93 scenario/contracts, 30/30 UI, 56 chat checks, coverage 91%, lint/build pass; video và smoke test URL còn lại |
 
 B5 và yêu cầu cải tiến chung đã hoàn thành ở môi trường local. Mission 3 chưa bàn giao xong cho đến khi commit/push, deploy smoke test và video hoàn tất.
 

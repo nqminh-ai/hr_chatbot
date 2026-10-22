@@ -83,10 +83,11 @@ Các lệnh được chạy tại workspace local ngày 22/10/2026:
 | Lệnh | Kết quả |
 |---|---|
 | `.\.venv\Scripts\python.exe -B -m unittest discover -s tests -p "test_mission3.py" -v` | 4/4 pass |
-| `.\.venv\Scripts\python.exe -B -m unittest discover -s tests -p "test_*.py"` | 119/119 pass |
-| `python validate.py` | public 7/7, private 35/35, detailed 38/38, contracts 12/12; tổng 92/92 scenario/contract |
-| `npm test` | data/body, contracts, Gemini mock, 40 chat checks, UI/history và PostgreSQL embedded pass |
-| `npm run test:ui` | 21/21 pass sau khi thêm test Inspector và invalid temporal citation |
+| `.\.venv\Scripts\python.exe -B -m unittest discover -s tests -p "test_*.py"` | 126/126 pass |
+| `python validate.py` | public 7/7, private 35/35, detailed 38/38, contracts 13/13; tổng 93/93 scenario/contract |
+| `npm test` | data/body, contracts, Gemini mock, 56 chat checks, UI/history và PostgreSQL embedded pass |
+| `npm run test:ui` | 30/30 pass, gồm Inspector B5 và invalid temporal citation |
+| `npm run verify` | coverage Python 91%, toàn bộ test, lint và production build pass |
 | `npm run lint` | pass |
 | `npm run build` | production build pass |
 
@@ -99,10 +100,10 @@ Các con số trên chứng minh regression suite hiện tại pass; chúng khô
 | Điểm kiểm chứng | Mission 2 (`f428463`) | Mission 3 hiện tại | Bằng chứng tự động |
 |---|---|---|---|
 | Citation Python | Có document/clause identity và locator; thiếu source text, `valid_from`, `valid_to` | Có đủ identity, source text, validity window và locator | `CR-B5-01` |
-| Citation Next.js | Thiếu `doc_uid`, `valid_to`; `text_source` là text render thay vì nguyên văn nguồn | Cùng canonical metadata với Python | 12/12 shared contracts và 40 chat checks |
+| Citation Next.js | Thiếu `doc_uid`, `valid_to`; `text_source` là text render thay vì nguyên văn nguồn | Cùng canonical metadata với Python | 13/13 shared contracts và 56 chat checks |
 | Inspector | Chỉ hiển thị “Hiệu lực từ” và nhãn “Nguồn mẫu” | Hiển thị full validity window, ngày đang đối chiếu và `path:line · json_pointer` | UI test mở citation |
 | Temporal citation sai | Client chưa đối chiếu ngày trả lời với khoảng hiệu lực citation | Response bị từ chối trước khi hiển thị | UI negative test |
-| Regression | Baseline chức năng Mission 2 | Không đổi kết quả nghiệp vụ ngoài metadata kiểm chứng | 119/119 backend, 92/92 scenario/contracts, 21/21 UI |
+| Regression | Baseline chức năng Mission 2 | Không đổi kết quả nghiệp vụ ngoài metadata kiểm chứng | 126/126 backend, 93/93 scenario/contracts, 30/30 UI |
 
 Đây đồng thời là before/after trực tiếp cho B5: metadata nguồn đã có một phần ở Mission 2 nhưng chưa kiểm chứng được end-to-end tại điểm sử dụng; Mission 3 đưa bằng chứng canonical đến UI và chặn metadata nguồn sai.
 
@@ -118,7 +119,7 @@ Chủ động không viết lại rule engine, không thêm vector database/docu
 
 Khác biệt lớn nhất là chuyển provenance từ “metadata kỹ thuật có sẵn” thành “bằng chứng người dùng nhìn thấy và đối chiếu được”. Trước cải tiến, Inspector chỉ cho biết phiên bản và ngày bắt đầu hiệu lực. Sau cải tiến, cùng thẻ citation cho biết identity tài liệu, cả khoảng hiệu lực, ngày truy vấn được xác nhận và vị trí nguồn chi tiết; client từ chối hiển thị nếu citation không có hiệu lực tại ngày trả lời.
 
-Bằng chứng gồm CR-B5-01 kiểm tra claim/citation/trace/graph cùng `clause_id`, UI test tái hiện thao tác mở citation, negative test từ chối temporal citation sai và 12/12 shared contracts so metadata giữa Python–TypeScript. Bộ regression backend/frontend tiếp tục pass sau thay đổi.
+Bằng chứng gồm CR-B5-01 kiểm tra claim/citation/trace/graph cùng `clause_id`, UI test tái hiện thao tác mở citation, negative test từ chối temporal citation sai và 13/13 shared contracts so metadata giữa Python–TypeScript. Bộ regression backend/frontend tiếp tục pass sau thay đổi.
 
 ### 3. Nếu đưa cho người dùng thật ngày mai, rủi ro hoặc giới hạn lớn nhất là gì? Ưu tiên xử lý thế nào?
 
